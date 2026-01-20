@@ -1,0 +1,15 @@
+node_modules
+**/node_modules
+.pnpm-store
+**/.pnpm-store
+.git
+.github
+artifacts
+**/artifacts
+**/target
+**/dist
+**/*.tgz
+**/*.proof
+**/*.pw
+**/*.so
+**/*-keypair.json

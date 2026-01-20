@@ -1,0 +1,40 @@
+node_modules/
+dist/
+coverage/
+.nyc_output/
+.DS_Store
+
+# Rust
+/target/
+**/target/
+
+# Solana / Anchor
+.anchor/
+**/.anchor/
+
+# Keys
+**/keypair/*.json
+**/*keypair*.json
+**/deployer.json
+.env
+.env.*
+.secrets/
+*.pem
+*.key
+
+# Frontend
+.next/
+out/
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+artifacts/
+docs/living-spec.md
+docs/sdk-usage.md
+roadmap.md
+hackathon-details.md

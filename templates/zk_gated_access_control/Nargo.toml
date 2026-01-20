@@ -1,0 +1,6 @@
+[package]
+name = "zk_gated_access_control"
+type = "bin"
+authors = [""]
+
+[dependencies]

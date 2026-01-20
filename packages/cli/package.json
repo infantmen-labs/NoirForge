@@ -1,0 +1,17 @@
+{
+  "name": "@noirforge/cli",
+  "version": "0.0.0",
+  "private": true,
+  "bin": {
+    "noirforge": "bin/noirforge.js"
+  },
+  "scripts": {
+    "noirforge": "node bin/noirforge.js",
+    "test": "node --test test/noirforge.test.js",
+    "test:integration": "node --test test/integration",
+    "test:e2e:devnet": "node --test test/e2e"
+  },
+  "dependencies": {
+    "@solana/web3.js": "^1.98.4"
+  }
+}

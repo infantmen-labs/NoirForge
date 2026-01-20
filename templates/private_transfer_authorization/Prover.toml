@@ -1,0 +1,5 @@
+recipient = "10"
+amount = "1"
+secret = "7"
+nonce = "5"
+auth_tag = "23"

@@ -1,0 +1,33 @@
+name: Security
+
+"on":
+  pull_request:
+  push:
+
+jobs:
+  dependency-review:
+    if: "${{ github.event_name == 'pull_request' }}"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4
+
+  sbom:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate SBOM (SPDX JSON)
+        uses: anchore/sbom-action@v0.16.0
+        with:
+          path: .
+          format: spdx-json
+          output-file: sbom.spdx.json
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-spdx-json
+          path: sbom.spdx.json

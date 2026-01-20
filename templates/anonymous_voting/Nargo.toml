@@ -1,0 +1,6 @@
+[package]
+name = "anonymous_voting"
+type = "bin"
+authors = [""]
+
+[dependencies]

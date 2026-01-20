@@ -1,0 +1,9 @@
+[package]
+name = "noirforge-sdk"
+version = "0.0.0"
+edition = "2021"
+rust-version = "1.90"
+publish = false
+
+[dependencies]
+solana-program = "2"

@@ -1,0 +1,6 @@
+[package]
+name = "selective_disclosure"
+type = "bin"
+authors = [""]
+
+[dependencies]

@@ -1,0 +1,3 @@
+vote = "1"
+nonce = "42"
+encrypted_vote = "43"

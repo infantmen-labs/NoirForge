@@ -1,0 +1,9 @@
+[package]
+name = "noirforge-rust-sdk-instruction-data"
+version = "0.0.0"
+edition = "2021"
+rust-version = "1.90"
+publish = false
+
+[dependencies]
+noirforge-sdk = { path = "../../crates/sdk-rs" }

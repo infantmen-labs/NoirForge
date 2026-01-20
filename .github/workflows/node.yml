@@ -1,0 +1,58 @@
+name: Node
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 1.24.12
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.18.1
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.18.3
+
+      - name: pnpm install
+        run: pnpm install --frozen-lockfile
+
+      - name: Install noirup + nargo
+        run: |
+          curl -L https://raw.githubusercontent.com/noir-lang/noirup/main/install | bash
+          echo "$HOME/.nargo/bin" >> "$GITHUB_PATH"
+          "$HOME/.nargo/bin/noirup" -v 1.0.0-beta.13
+          nargo --version
+
+      - name: Install sunspot (pinned)
+        run: |
+          git clone https://github.com/reilabs/sunspot.git "$HOME/sunspot"
+          cd "$HOME/sunspot"
+          git checkout 8e61988da7b35add0e1384962f46c46b367235c1
+          cd go
+          go build -o sunspot .
+          echo "$HOME/sunspot/go" >> "$GITHUB_PATH"
+          sunspot --help
+
+      - name: Smoke: noirforge pipeline (sum_a_b)
+        run: |
+          set -euo pipefail
+          export GNARK_VERIFIER_BIN="$HOME/sunspot/gnark-solana/crates/verifier-bin"
+          tmpdir="$(mktemp -d)"
+          pnpm noirforge init sum_a_b "$tmpdir/sum_a_b"
+          pnpm noirforge test --circuit-dir "$tmpdir/sum_a_b"
+          pnpm noirforge build --circuit-dir "$tmpdir/sum_a_b" --artifact-name ci_sum_a_b
+          pnpm noirforge prove --circuit-dir "$tmpdir/sum_a_b" --artifact-name ci_sum_a_b
+          pnpm noirforge verify-local --artifact-name ci_sum_a_b
+          rm -rf "$tmpdir"
+
+      - name: Repo tests
+        run: pnpm test

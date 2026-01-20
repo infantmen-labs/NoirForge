@@ -1,0 +1,27 @@
+# NoirForge pinned toolchain versions
+# This file is a single place to record versions used for reproducible builds.
+
+# ZK tooling
+noirup installed
+nargo 1.0.0-beta.13
+sunspot 8e61988da7b35add0e1384962f46c46b367235c1
+
+# Solana
+solana 2.3.13
+anchor 0.31.1
+
+# Rust
+rustc 1.90.0
+cargo 1.90.0
+rustup 1.28.2
+
+# Node
+node 20.18.1
+npm 10.8.2
+pnpm 10.18.3
+
+# Go
+go 1.24.12
+
+# Docker
+docker 28.5.1
