@@ -1,6 +1,6 @@
 name: Node
 
-on:
+"on":
   push:
   pull_request:
 
@@ -42,7 +42,7 @@ jobs:
           echo "$HOME/sunspot/go" >> "$GITHUB_PATH"
           sunspot --help
 
-      - name: Smoke: noirforge pipeline (sum_a_b)
+      - name: "Smoke: noirforge pipeline (sum_a_b)"
         run: |
           set -euo pipefail
           export GNARK_VERIFIER_BIN="$HOME/sunspot/gnark-solana/crates/verifier-bin"

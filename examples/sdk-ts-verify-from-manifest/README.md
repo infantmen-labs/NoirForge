@@ -24,7 +24,7 @@ Build the SDK and submit the verification transaction:
 ```bash
 pnpm -C packages/sdk-ts build
 node examples/sdk-ts-verify-from-manifest/verify-from-manifest.js \
-  --manifest artifacts/example_sum_a_b/devnet/noirforge.json \
+  --manifest artifacts/example_sum_a_b/local/noirforge.json \
   --rpc https://api.devnet.solana.com \
   --cu-limit 250000
 ```

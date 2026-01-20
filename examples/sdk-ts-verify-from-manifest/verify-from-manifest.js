@@ -7,7 +7,7 @@ const {
   loadKeypairFromFile,
   loadManifest,
   submitVerifyFromManifest,
-} = require('../../packages/sdk-ts/dist/index.js');
+} = require('@noirforge/sdk');
 
 function fail(msg) {
   process.stderr.write(`${msg}\n`);

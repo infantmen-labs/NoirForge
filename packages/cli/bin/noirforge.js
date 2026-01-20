@@ -93,6 +93,8 @@ async function cmdBench(opts) {
   if (opts['out-dir']) common.push('--out-dir', opts['out-dir']);
 
   const cluster = opts['cluster'] || null;
+  const allowMainnetArgs = isTruthy(opts['allow-mainnet']) ? ['--allow-mainnet'] : [];
+  const cuLimitArgs = opts['cu-limit'] ? ['--cu-limit', String(opts['cu-limit'])] : [];
   const payerArgs = opts['payer'] ? ['--payer', opts['payer']] : [];
   const rpcArgs = [];
   if (opts['rpc-url']) rpcArgs.push('--rpc-url', opts['rpc-url']);
@@ -109,7 +111,15 @@ async function cmdBench(opts) {
   let verifyOnchainMs = null;
   let txStatsMs = null;
   if (cluster) {
-    deployMs = runSelf(['deploy', '--artifact-name', artifactName, ...(opts['out-dir'] ? ['--out-dir', opts['out-dir']] : []), '--cluster', cluster]);
+    deployMs = runSelf([
+      'deploy',
+      '--artifact-name',
+      artifactName,
+      ...(opts['out-dir'] ? ['--out-dir', opts['out-dir']] : []),
+      '--cluster',
+      cluster,
+      ...allowMainnetArgs,
+    ]);
     verifyOnchainMs = runSelf([
       'verify-onchain',
       '--artifact-name',
@@ -117,6 +127,8 @@ async function cmdBench(opts) {
       ...(opts['out-dir'] ? ['--out-dir', opts['out-dir']] : []),
       '--cluster',
       cluster,
+      ...allowMainnetArgs,
+      ...cuLimitArgs,
       ...payerArgs,
       ...rpcArgs,
     ]);
@@ -464,7 +476,7 @@ function usage() {
     '',
     'Usage:',
     '  noirforge init <template> [dest]',
-    '  noirforge bench [--circuit-dir <path>] [--artifact-name <name>] [--out-dir <path>] [--cluster <devnet|mainnet-beta|testnet|localhost|url>] [--payer <keypair.json>] [--rpc-provider <default|quicknode|helius>] [--rpc-url <url>] [--rpc-endpoints <csv>] [--ws-url <url>] [--ws-endpoints <csv>]',
+    '  noirforge bench [--circuit-dir <path>] [--artifact-name <name>] [--out-dir <path>] [--cluster <devnet|mainnet-beta|testnet|localhost|url>] [--allow-mainnet] [--cu-limit <n>] [--payer <keypair.json>] [--rpc-provider <default|quicknode|helius>] [--rpc-url <url>] [--rpc-endpoints <csv>] [--ws-url <url>] [--ws-endpoints <csv>]',
     '  noirforge build [--circuit-dir <path>] [--artifact-name <name>] [--out-dir <path>] [--relative-paths-only]',
     '  noirforge compile [--circuit-dir <path>] [--artifact-name <name>] [--out-dir <path>] [--relative-paths-only]',
     '  noirforge setup [--circuit-dir <path>] [--artifact-name <name>] [--out-dir <path>] [--relative-paths-only]',
@@ -472,9 +484,9 @@ function usage() {
     '  noirforge test [--circuit-dir <path>]',
     '  noirforge verify-local [--artifact-name <name>] [--out-dir <path>]',
     '  noirforge rerun-prove --artifact-name <name> [--out-dir <path>]',
-    '  noirforge deploy --artifact-name <name> [--out-dir <path>] [--relative-paths-only] [--cluster <devnet|mainnet-beta|testnet|localhost|url>] [--upgrade-authority <keypair.json>] [--final]',
-    '  noirforge verify-onchain --artifact-name <name> [--out-dir <path>] [--cluster <devnet|mainnet-beta|testnet|localhost|url>] [--payer <keypair.json>] [--rpc-provider <default|quicknode|helius>] [--rpc-url <url>] [--rpc-endpoints <csv>] [--ws-url <url>] [--ws-endpoints <csv>]',
-    '  noirforge simulate-onchain --artifact-name <name> [--out-dir <path>] [--cluster <devnet|mainnet-beta|testnet|localhost|url>] [--payer <keypair.json>] [--rpc-provider <default|quicknode|helius>] [--rpc-url <url>] [--rpc-endpoints <csv>] [--ws-url <url>] [--ws-endpoints <csv>]',
+    '  noirforge deploy --artifact-name <name> [--out-dir <path>] [--relative-paths-only] [--cluster <devnet|mainnet-beta|testnet|localhost|url>] [--allow-mainnet] [--upgrade-authority <keypair.json>] [--final]',
+    '  noirforge verify-onchain --artifact-name <name> [--out-dir <path>] [--cluster <devnet|mainnet-beta|testnet|localhost|url>] [--allow-mainnet] [--cu-limit <n>] [--payer <keypair.json>] [--rpc-provider <default|quicknode|helius>] [--rpc-url <url>] [--rpc-endpoints <csv>] [--ws-url <url>] [--ws-endpoints <csv>]',
+    '  noirforge simulate-onchain --artifact-name <name> [--out-dir <path>] [--cluster <devnet|mainnet-beta|testnet|localhost|url>] [--allow-mainnet] [--cu-limit <n>] [--payer <keypair.json>] [--rpc-provider <default|quicknode|helius>] [--rpc-url <url>] [--rpc-endpoints <csv>] [--ws-url <url>] [--ws-endpoints <csv>]',
     '  noirforge tx-stats [--artifact-name <name>] [--out-dir <path>] [--signature <sig>] [--cluster <devnet|mainnet-beta|testnet|localhost|url>] [--rpc-provider <default|quicknode|helius>] [--rpc-url <url>] [--rpc-endpoints <csv>] [--ws-url <url>] [--ws-endpoints <csv>]',
     '  noirforge index-tx [--artifact-name <name>] [--out-dir <path>] [--signature <sig>] [--cluster <devnet|mainnet-beta|testnet|localhost|url>] [--index-path <path>] [--helius-enhanced <0|1>] [--helius-api-key <key>] [--rpc-provider <default|quicknode|helius>] [--rpc-url <url>] [--rpc-endpoints <csv>] [--ws-url <url>] [--ws-endpoints <csv>]',
     '  noirforge doctor',
@@ -514,7 +526,7 @@ function parseArgs(argv) {
     const key = a.slice(2);
     const val = argv[i + 1];
     if (val == null || val.startsWith('--')) {
-      if (key === 'relative-paths-only' || key === 'final') {
+      if (key === 'relative-paths-only' || key === 'final' || key === 'allow-mainnet') {
         out[key] = true;
         continue;
       }
@@ -1161,6 +1173,9 @@ async function cmdVerifyOnchain(opts) {
   }
 
   const cluster = opts['cluster'] || manifest.outputs.deployed_cluster || 'devnet';
+  if (String(cluster) === 'mainnet-beta' && !isTruthy(opts['allow-mainnet'])) {
+    fail('Refusing to use mainnet-beta without explicit opt-in. Re-run with --allow-mainnet.');
+  }
   const deployedProgramId = manifest.outputs.deployed_program_id;
   if (!deployedProgramId) {
     fail(
@@ -1190,7 +1205,13 @@ async function cmdVerifyOnchain(opts) {
   const pwBytes = await fsp.readFile(pwPath);
   const data = Buffer.concat([proofBytes, pwBytes]);
 
-  const computeIx = web3.ComputeBudgetProgram.setComputeUnitLimit({ units: 500_000 });
+  const cuLimitRaw = opts['cu-limit'];
+  const cuLimit = cuLimitRaw == null ? 500_000 : Number(cuLimitRaw);
+  if (!Number.isFinite(cuLimit) || cuLimit <= 0) {
+    fail('Invalid --cu-limit (expected a positive number)');
+  }
+
+  const computeIx = web3.ComputeBudgetProgram.setComputeUnitLimit({ units: Math.floor(cuLimit) });
   const verifyIx = new web3.TransactionInstruction({
     programId: new web3.PublicKey(deployedProgramId),
     keys: [],
@@ -1280,6 +1301,9 @@ async function cmdSimulateOnchain(opts) {
   }
 
   const cluster = opts['cluster'] || manifest.outputs.deployed_cluster || 'devnet';
+  if (String(cluster) === 'mainnet-beta' && !isTruthy(opts['allow-mainnet'])) {
+    fail('Refusing to use mainnet-beta without explicit opt-in. Re-run with --allow-mainnet.');
+  }
   const deployedProgramId = manifest.outputs.deployed_program_id;
   if (!deployedProgramId) {
     fail(
@@ -1309,7 +1333,13 @@ async function cmdSimulateOnchain(opts) {
   const pwBytes = await fsp.readFile(pwPath);
   const data = Buffer.concat([proofBytes, pwBytes]);
 
-  const computeIx = web3.ComputeBudgetProgram.setComputeUnitLimit({ units: 500_000 });
+  const cuLimitRaw = opts['cu-limit'];
+  const cuLimit = cuLimitRaw == null ? 500_000 : Number(cuLimitRaw);
+  if (!Number.isFinite(cuLimit) || cuLimit <= 0) {
+    fail('Invalid --cu-limit (expected a positive number)');
+  }
+
+  const computeIx = web3.ComputeBudgetProgram.setComputeUnitLimit({ units: Math.floor(cuLimit) });
   const verifyIx = new web3.TransactionInstruction({
     programId: new web3.PublicKey(deployedProgramId),
     keys: [],
@@ -1718,6 +1748,9 @@ async function cmdDeploy(opts) {
   let deployedSignature = null;
   let deployedUpgradeAuthority = null;
   if (cluster) {
+    if (String(cluster) === 'mainnet-beta' && !isTruthy(opts['allow-mainnet'])) {
+      fail('Refusing to deploy to mainnet-beta without explicit opt-in. Re-run with --allow-mainnet.');
+    }
     const finalFlag = isTruthy(opts.final);
     const upgradeAuthorityPath = opts['upgrade-authority'] ? path.resolve(opts['upgrade-authority']) : null;
 

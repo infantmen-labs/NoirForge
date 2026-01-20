@@ -135,6 +135,11 @@ test('parseArgs supports boolean --final', () => {
   assert.deepEqual(got, { _: [], final: true, foo: 'bar' });
 });
 
+test('parseArgs supports boolean --allow-mainnet', () => {
+  const got = parseArgs(['--allow-mainnet', '--foo', 'bar']);
+  assert.deepEqual(got, { _: [], 'allow-mainnet': true, foo: 'bar' });
+});
+
 test('buildOutputsRel makes paths relative to artifact dir and leaves non-path strings unchanged', () => {
   const outDir = '/tmp/noirforge-test-out';
   const outputs = {
