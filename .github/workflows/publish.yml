@@ -233,8 +233,8 @@ jobs:
               local name
               local ver
 
-              name="$(node -p "require(require('path').resolve(process.argv[1],'package.json')).name" "$dir")"
-              ver="$(node -p "require(require('path').resolve(process.argv[1],'package.json')).version" "$dir")"
+              name="$(DIR="$dir" node -e "const p=require('path'); const j=require(p.resolve(process.env.DIR,'package.json')); process.stdout.write(j.name);")"
+              ver="$(DIR="$dir" node -e "const p=require('path'); const j=require(p.resolve(process.env.DIR,'package.json')); process.stdout.write(j.version);")"
 
               echo "Publishing $name@$ver from $dir"
               if npm view "$name@$ver" version >/dev/null 2>&1; then
