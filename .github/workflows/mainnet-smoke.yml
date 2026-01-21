@@ -13,9 +13,38 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 360
     steps:
+      - name: Sanitize ref input
+        id: sanitize_ref
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          raw='${{ inputs.ref }}'
+          if [ -z "$raw" ]; then
+            raw="$GITHUB_REF"
+          fi
+
+          ref="$raw"
+          ref="$(printf '%s' "$ref" | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')"
+          ref="$(printf '%s' "$ref" | sed -E 's/^ref[[:space:]]*=[[:space:]]*//')"
+
+          if printf '%s' "$ref" | grep -Eq '[[:space:]]'; then
+            echo "Invalid ref input (contains whitespace): '$raw'" >&2
+            echo "Please enter only a git ref like 'v0.1.0-rc.1' (no 'ref = ' prefix)." >&2
+            exit 1
+          fi
+          if ! printf '%s' "$ref" | grep -Eq '^(refs/(heads|tags)/)?[0-9A-Za-z._/-]+$'; then
+            echo "Invalid ref input: '$raw'" >&2
+            echo "Expected a tag like 'v0.1.0-rc.1', a branch like 'main', or a SHA." >&2
+            exit 1
+          fi
+
+          echo "Using ref: $ref"
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref || github.ref }}
+          ref: ${{ steps.sanitize_ref.outputs.ref }}
 
       - uses: actions/setup-go@v5
         with:

@@ -24,10 +24,50 @@ jobs:
       id-token: write
 
     steps:
+      - name: Sanitize ref input
+        id: sanitize_ref
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          raw='${{ inputs.ref }}'
+          if [ -z "$raw" ]; then
+            raw="$GITHUB_REF"
+          fi
+
+          # Common copy/paste mistake: "ref = vX.Y.Z" (including the "ref =" prefix)
+          ref="$raw"
+          ref="$(printf '%s' "$ref" | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')"
+          ref="$(printf '%s' "$ref" | sed -E 's/^ref[[:space:]]*=[[:space:]]*//')"
+
+          # Reject whitespace after normalization (git refs cannot contain spaces)
+          if printf '%s' "$ref" | grep -Eq '[[:space:]]'; then
+            echo "Invalid ref input (contains whitespace): '$raw'" >&2
+            echo "Please enter only a git ref like 'v0.1.0-rc.1' (no 'ref = ' prefix)." >&2
+            exit 1
+          fi
+
+          # For tag checks/versioning, prefer the ref name (strip refs/tags/ or refs/heads/)
+          ref_name="$ref"
+          ref_name="${ref_name#refs/tags/}"
+          ref_name="${ref_name#refs/heads/}"
+
+          # Basic safety validation: allow typical git ref charset
+          if ! printf '%s' "$ref" | grep -Eq '^(refs/(heads|tags)/)?[0-9A-Za-z._/-]+$'; then
+            echo "Invalid ref input: '$raw'" >&2
+            echo "Expected a tag like 'v0.1.0-rc.1', a branch like 'main', or a SHA." >&2
+            exit 1
+          fi
+
+          echo "Using ref: $ref"
+          echo "Using ref_name: $ref_name"
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+          echo "ref_name=$ref_name" >> "$GITHUB_OUTPUT"
+
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref || github.ref }}
+          ref: ${{ steps.sanitize_ref.outputs.ref }}
 
       - uses: actions/setup-node@v4
         with:
@@ -53,10 +93,7 @@ jobs:
             exit 0
           fi
 
-          ref="${GITHUB_REF_NAME:-}"
-          if [ -n "${{ inputs.ref }}" ]; then
-            ref="${{ inputs.ref }}"
-          fi
+          ref="${{ steps.sanitize_ref.outputs.ref_name }}"
           if ! echo "$ref" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+([-.].*)?$'; then
             echo "Publish requested but ref is not a release tag (expected vMAJOR.MINOR.PATCH...): $ref" >&2
             exit 1
@@ -102,11 +139,7 @@ jobs:
         id: version
         run: |
           set -euo pipefail
-          ref="${GITHUB_REF_NAME:-}"
-          if [ -n "${{ inputs.ref }}" ]; then
-            ref="${{ inputs.ref }}"
-          fi
-
+          ref="${{ steps.sanitize_ref.outputs.ref_name }}"
           if echo "$ref" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+([-.].*)?$'; then
             echo "version=${ref#v}" >> "$GITHUB_OUTPUT"
           else
