@@ -21,8 +21,7 @@ jobs:
           node-version: 20.18.1
 
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10.18.3
+        with: {}
 
       - uses: dtolnay/rust-toolchain@master
         with:
