@@ -228,9 +228,9 @@ jobs:
           publish="${{ inputs.publish }}"
           tag="${{ inputs.npm_tag }}"
           if [ "$publish" = "true" ]; then
-            pnpm -C packages/core publish --access public --tag "$tag" --no-git-checks
-            pnpm -C packages/sdk-ts publish --access public --tag "$tag" --no-git-checks
-            pnpm -C packages/cli publish --access public --tag "$tag" --no-git-checks
+            (cd packages/core && npm publish --access public --tag "$tag")
+            (cd packages/sdk-ts && npm publish --access public --tag "$tag")
+            (cd packages/cli && npm publish --access public --tag "$tag")
           else
             echo "publish=false; skipping npm publish"
           fi
