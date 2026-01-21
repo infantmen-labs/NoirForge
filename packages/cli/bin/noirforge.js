@@ -7,6 +7,10 @@ const os = require('node:os');
 const crypto = require('node:crypto');
 const { spawnSync } = require('node:child_process');
 
+const { buildInstructionData: coreBuildInstructionData, resolveOutputs: coreResolveOutputs } = require('@noirforge/core');
+const bs58Mod = require('bs58');
+const bs58 = bs58Mod && bs58Mod.default ? bs58Mod.default : bs58Mod;
+
 const MANIFEST_SCHEMA_VERSION = 1;
 
 function envTruthy(v) {
@@ -17,6 +21,7 @@ let obsLogEnabled = envTruthy(process.env.NOIRFORGE_OBS_LOG);
 let obsEventsPath = process.env.NOIRFORGE_OBS_EVENTS_PATH || null;
 let obsEventsDirReady = false;
 let obsState = null;
+let obsSeq = 0;
 
 function obsEmit(obj) {
   if (!obsLogEnabled && !obsEventsPath) return;
@@ -36,6 +41,29 @@ function obsEmit(obj) {
     } catch {
     }
   }
+}
+
+function obsNextId(prefix) {
+  obsSeq++;
+  return `${prefix || 'obs'}_${Date.now()}_${obsSeq}`;
+}
+
+function redactArgs(args) {
+  const a = Array.isArray(args) ? args : [];
+  const out = [];
+  for (let i = 0; i < a.length; i++) {
+    const v = a[i];
+    if (v === '--helius-api-key') {
+      out.push(v);
+      if (i + 1 < a.length) {
+        out.push('<redacted>');
+        i++;
+      }
+      continue;
+    }
+    out.push(v);
+  }
+  return out;
 }
 
 function obsBegin(cmd) {
@@ -248,6 +276,107 @@ function backoffDelayMs(attempt, baseMs, maxMs) {
   return Math.min(maxMs, exp + jitter);
 }
 
+function normalizePubkey(x) {
+  if (!x) return null;
+  if (typeof x === 'string') return x;
+  if (typeof x === 'object' && typeof x.toBase58 === 'function') {
+    try {
+      return x.toBase58();
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+function decodeIxData(data) {
+  if (!data) return null;
+  if (Buffer.isBuffer(data)) return Buffer.from(data);
+  if (data instanceof Uint8Array) return Buffer.from(data);
+  if (typeof data === 'string') {
+    try {
+      return Buffer.from(bs58.decode(data));
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+function extractInstructionDataForProgram(txInfo, programId) {
+  const pid = normalizePubkey(programId);
+  if (!pid) return [];
+
+  const tx = txInfo && txInfo.transaction ? txInfo.transaction : null;
+  const msg = tx && tx.message ? tx.message : null;
+  if (!msg) return [];
+
+  const accountKeys = Array.isArray(msg.accountKeys) ? msg.accountKeys.map(normalizePubkey) : [];
+  const ins = Array.isArray(msg.instructions)
+    ? msg.instructions
+    : Array.isArray(msg.compiledInstructions)
+      ? msg.compiledInstructions
+      : [];
+
+  const out = [];
+  for (const ix of ins) {
+    const ixProgramId =
+      ix && typeof ix === 'object' && typeof ix.programIdIndex === 'number'
+        ? accountKeys[ix.programIdIndex] || null
+        : ix && typeof ix === 'object' && ix.programId
+          ? normalizePubkey(ix.programId)
+          : null;
+
+    if (!ixProgramId || ixProgramId !== pid) continue;
+
+    const data = ix && typeof ix === 'object' ? decodeIxData(ix.data) : null;
+    if (data) out.push(data);
+  }
+
+  return out;
+}
+
+function buildNoirforgeVerifyIndexRecord({ signature, cluster, rpcEndpoint, txInfo, programId, artifactName, manifestName, now }) {
+  const t = typeof now === 'number' ? now : Date.now();
+  const meta = txInfo && txInfo.meta ? txInfo.meta : null;
+  const dataChunks = extractInstructionDataForProgram(txInfo, programId);
+  if (dataChunks.length === 0) return null;
+
+  const totalLen = dataChunks.reduce((acc, b) => acc + (b ? b.length : 0), 0);
+  const ok = !meta || !meta.err;
+
+  return {
+    kind: 'noirforge_verify',
+    fetched_at: new Date(t).toISOString(),
+    signature,
+    cluster,
+    rpc_endpoint: rpcEndpoint || null,
+    slot: txInfo && typeof txInfo.slot === 'number' ? txInfo.slot : null,
+    block_time: txInfo && typeof txInfo.blockTime === 'number' ? txInfo.blockTime : null,
+    program_id: normalizePubkey(programId),
+    artifact_name: artifactName || null,
+    manifest_name: manifestName || null,
+    ok,
+    err: meta ? meta.err : null,
+    fee_lamports: meta && typeof meta.fee === 'number' ? meta.fee : null,
+    compute_units: meta && typeof meta.computeUnitsConsumed === 'number' ? meta.computeUnitsConsumed : null,
+    verify_instruction_count: dataChunks.length,
+    instruction_data_len: totalLen,
+  };
+}
+
+function resolveProgramIdFromManifest(manifest) {
+  const outputs = manifest && typeof manifest === 'object' && manifest.outputs && typeof manifest.outputs === 'object' ? manifest.outputs : null;
+  if (!outputs) return null;
+  const cand =
+    outputs.verify_onchain_program_id ||
+    outputs.deployed_program_id ||
+    outputs.program_id ||
+    outputs.built_program_id ||
+    null;
+  return typeof cand === 'string' && cand.length > 0 ? cand : null;
+}
+
 function buildTxIndexRecord({ signature, cluster, rpcEndpoint, txInfo, now }) {
   const t = typeof now === 'number' ? now : Date.now();
   const meta = txInfo && txInfo.meta ? txInfo.meta : null;
@@ -262,6 +391,132 @@ function buildTxIndexRecord({ signature, cluster, rpcEndpoint, txInfo, now }) {
     fee_lamports: meta && typeof meta.fee === 'number' ? meta.fee : null,
     compute_units: meta && typeof meta.computeUnitsConsumed === 'number' ? meta.computeUnitsConsumed : null,
     err: meta ? meta.err : null,
+  };
+}
+
+function quantileSorted(sorted, q) {
+  if (!Array.isArray(sorted) || sorted.length === 0) return null;
+  const qq = Number(q);
+  if (!Number.isFinite(qq)) return null;
+  const clamped = Math.min(1, Math.max(0, qq));
+  const idx = Math.floor(clamped * (sorted.length - 1));
+  const v = sorted[idx];
+  return typeof v === 'number' && Number.isFinite(v) ? v : null;
+}
+
+function summarizeNumbers(nums) {
+  const arr = (Array.isArray(nums) ? nums : []).filter((n) => typeof n === 'number' && Number.isFinite(n));
+  if (arr.length === 0) {
+    return {
+      count: 0,
+      min: null,
+      max: null,
+      mean: null,
+      p50: null,
+      p95: null,
+    };
+  }
+
+  let sum = 0;
+  let min = arr[0];
+  let max = arr[0];
+  for (const n of arr) {
+    sum += n;
+    if (n < min) min = n;
+    if (n > max) max = n;
+  }
+
+  const sorted = [...arr].sort((a, b) => a - b);
+  return {
+    count: arr.length,
+    min,
+    max,
+    mean: sum / arr.length,
+    p50: quantileSorted(sorted, 0.5),
+    p95: quantileSorted(sorted, 0.95),
+  };
+}
+
+function computeIndexLagSeconds(rec) {
+  if (!rec || typeof rec !== 'object') return null;
+  const bt = rec.block_time;
+  if (typeof bt !== 'number' || !Number.isFinite(bt)) return null;
+  const fetchedAt = rec.fetched_at;
+  if (typeof fetchedAt !== 'string') return null;
+  const ms = Date.parse(fetchedAt);
+  if (!Number.isFinite(ms)) return null;
+  return ms / 1000 - bt;
+}
+
+function buildIndexReport(records, opts) {
+  const now = opts && typeof opts.now === 'number' ? opts.now : Date.now();
+  const verifies = (Array.isArray(records) ? records : []).filter((r) => r && typeof r === 'object' && r.kind === 'noirforge_verify');
+
+  const verifyCount = verifies.length;
+  const okCount = verifies.filter((r) => r.ok === true).length;
+  const errCount = verifyCount - okCount;
+  const okRate = verifyCount > 0 ? okCount / verifyCount : null;
+
+  const computeUnits = verifies.map((r) => r.compute_units);
+  const fees = verifies.map((r) => r.fee_lamports);
+  const dataLens = verifies.map((r) => r.instruction_data_len);
+  const lags = verifies.map(computeIndexLagSeconds);
+
+  const byArtifact = {};
+  const byProgram = {};
+  for (const r of verifies) {
+    const a = typeof r.artifact_name === 'string' && r.artifact_name.length > 0 ? r.artifact_name : null;
+    const p = typeof r.program_id === 'string' && r.program_id.length > 0 ? r.program_id : null;
+    if (a) {
+      if (!byArtifact[a]) byArtifact[a] = [];
+      byArtifact[a].push(r);
+    }
+    if (p) {
+      if (!byProgram[p]) byProgram[p] = [];
+      byProgram[p].push(r);
+    }
+  }
+
+  function summarizeGroup(list) {
+    const count = list.length;
+    const ok = list.filter((x) => x.ok === true).length;
+    const err = count - ok;
+    return {
+      verify_count: count,
+      ok_count: ok,
+      err_count: err,
+      ok_rate: count > 0 ? ok / count : null,
+      compute_units: summarizeNumbers(list.map((x) => x.compute_units)),
+      fee_lamports: summarizeNumbers(list.map((x) => x.fee_lamports)),
+      instruction_data_len: summarizeNumbers(list.map((x) => x.instruction_data_len)),
+      index_lag_seconds: summarizeNumbers(list.map(computeIndexLagSeconds)),
+    };
+  }
+
+  const byArtifactSummary = {};
+  for (const [k, list] of Object.entries(byArtifact)) {
+    byArtifactSummary[k] = summarizeGroup(list);
+  }
+  const byProgramSummary = {};
+  for (const [k, list] of Object.entries(byProgram)) {
+    byProgramSummary[k] = summarizeGroup(list);
+  }
+
+  return {
+    kind: 'noirforge_index_report',
+    generated_at: new Date(now).toISOString(),
+    totals: {
+      verify_count: verifyCount,
+      ok_count: okCount,
+      err_count: errCount,
+      ok_rate: okRate,
+    },
+    compute_units: summarizeNumbers(computeUnits),
+    fee_lamports: summarizeNumbers(fees),
+    instruction_data_len: summarizeNumbers(dataLens),
+    index_lag_seconds: summarizeNumbers(lags),
+    by_artifact: byArtifactSummary,
+    by_program: byProgramSummary,
   };
 }
 
@@ -413,6 +668,7 @@ async function withRpcConnection(web3, endpoints, fn, opts) {
   const rateLimitDelayMs = opts && typeof opts.rateLimitDelayMs === 'number' ? opts.rateLimitDelayMs : 1_000;
   const commitment = (opts && opts.commitment) || 'confirmed';
   const wsEndpoints = opts && Array.isArray(opts.wsEndpoints) ? opts.wsEndpoints : null;
+  const obsOp = opts && typeof opts.obsOp === 'string' ? opts.obsOp : 'rpc';
 
   if (!Array.isArray(endpoints) || endpoints.length === 0) {
     fail('RPC provider requires at least one endpoint');
@@ -433,12 +689,50 @@ async function withRpcConnection(web3, endpoints, fn, opts) {
     const connection = wsEndpoint
       ? new web3.Connection(endpoint, { commitment, wsEndpoint })
       : new web3.Connection(endpoint, commitment);
+
+    const spanId = obsNextId('rpc');
+    const rpcStartMs = Date.now();
+    obsEmit({
+      kind: 'rpc_attempt_start',
+      at: new Date(rpcStartMs).toISOString(),
+      span_id: spanId,
+      cmd: obsState ? obsState.cmd : null,
+      op: obsOp,
+      attempt,
+      endpoint,
+    });
     try {
-      return await fn(connection, endpoint);
+      const out = await fn(connection, endpoint);
+      const endMs = Date.now();
+      obsEmit({
+        kind: 'rpc_attempt_end',
+        at: new Date(endMs).toISOString(),
+        span_id: spanId,
+        cmd: obsState ? obsState.cmd : null,
+        op: obsOp,
+        attempt,
+        endpoint,
+        ok: true,
+        duration_ms: endMs - rpcStartMs,
+      });
+      return out;
     } catch (e) {
+      const endMs = Date.now();
+      const msg = e && typeof e === 'object' && typeof e.message === 'string' ? e.message : String(e);
+      obsEmit({
+        kind: 'rpc_attempt_end',
+        at: new Date(endMs).toISOString(),
+        span_id: spanId,
+        cmd: obsState ? obsState.cmd : null,
+        op: obsOp,
+        attempt,
+        endpoint,
+        ok: false,
+        duration_ms: endMs - rpcStartMs,
+        error: msg,
+      });
       lastErr = e;
       if (attempt >= maxRetries) {
-        const msg = e && typeof e === 'object' && typeof e.message === 'string' ? e.message : String(e);
         fail(`RPC request failed after ${attempt + 1} attempt(s) (last endpoint: ${endpoint})\n${msg}`);
       }
 
@@ -455,10 +749,35 @@ async function withRpcConnection(web3, endpoints, fn, opts) {
 }
 
 function runCapture(cmd, args, options) {
+  const spanId = obsNextId('exec');
+  const startMs = Date.now();
+  obsEmit({
+    kind: 'exec_start',
+    at: new Date(startMs).toISOString(),
+    span_id: spanId,
+    cmd: obsState ? obsState.cmd : null,
+    tool: cmd,
+    args: redactArgs(args),
+    cwd: options && options.cwd ? options.cwd : null,
+  });
   const res = spawnSync(cmd, args, {
     stdio: ['ignore', 'pipe', 'pipe'],
     encoding: 'utf8',
     ...options,
+  });
+  const endMs = Date.now();
+  obsEmit({
+    kind: 'exec_end',
+    at: new Date(endMs).toISOString(),
+    span_id: spanId,
+    cmd: obsState ? obsState.cmd : null,
+    tool: cmd,
+    ok: !res.error && (typeof res.status !== 'number' || res.status === 0),
+    status: typeof res.status === 'number' ? res.status : null,
+    duration_ms: endMs - startMs,
+    stdout_bytes: typeof res.stdout === 'string' ? Buffer.byteLength(res.stdout, 'utf8') : null,
+    stderr_bytes: typeof res.stderr === 'string' ? Buffer.byteLength(res.stderr, 'utf8') : null,
+    error: res.error ? res.error.message : null,
   });
   if (res.error) {
     fail(`Failed to run ${cmd}: ${res.error.message}`);
@@ -489,6 +808,8 @@ function usage() {
     '  noirforge simulate-onchain --artifact-name <name> [--out-dir <path>] [--cluster <devnet|mainnet-beta|testnet|localhost|url>] [--allow-mainnet] [--cu-limit <n>] [--payer <keypair.json>] [--rpc-provider <default|quicknode|helius>] [--rpc-url <url>] [--rpc-endpoints <csv>] [--ws-url <url>] [--ws-endpoints <csv>]',
     '  noirforge tx-stats [--artifact-name <name>] [--out-dir <path>] [--signature <sig>] [--cluster <devnet|mainnet-beta|testnet|localhost|url>] [--rpc-provider <default|quicknode|helius>] [--rpc-url <url>] [--rpc-endpoints <csv>] [--ws-url <url>] [--ws-endpoints <csv>]',
     '  noirforge index-tx [--artifact-name <name>] [--out-dir <path>] [--signature <sig>] [--cluster <devnet|mainnet-beta|testnet|localhost|url>] [--index-path <path>] [--helius-enhanced <0|1>] [--helius-api-key <key>] [--rpc-provider <default|quicknode|helius>] [--rpc-url <url>] [--rpc-endpoints <csv>] [--ws-url <url>] [--ws-endpoints <csv>]',
+    '  noirforge index-program [--program-id <pubkey>] [--artifact-name <name>] [--out-dir <path>] [--cluster <devnet|mainnet-beta|testnet|localhost|url>] [--index-path <path>] [--limit <n>] [--before <sig>] [--until <sig>] [--rpc-provider <default|quicknode|helius>] [--rpc-url <url>] [--rpc-endpoints <csv>] [--ws-url <url>] [--ws-endpoints <csv>]',
+    '  noirforge report-index [--artifact-name <name>] [--out-dir <path>] [--index-path <path>] [--format <json|kv>]',
     '  noirforge doctor',
     '  noirforge help',
     '',
@@ -551,9 +872,32 @@ function withAugmentedPath(env) {
 }
 
 function run(cmd, args, options) {
+  const spanId = obsNextId('exec');
+  const startMs = Date.now();
+  obsEmit({
+    kind: 'exec_start',
+    at: new Date(startMs).toISOString(),
+    span_id: spanId,
+    cmd: obsState ? obsState.cmd : null,
+    tool: cmd,
+    args: redactArgs(args),
+    cwd: options && options.cwd ? options.cwd : null,
+  });
   const res = spawnSync(cmd, args, {
     stdio: 'inherit',
     ...options,
+  });
+  const endMs = Date.now();
+  obsEmit({
+    kind: 'exec_end',
+    at: new Date(endMs).toISOString(),
+    span_id: spanId,
+    cmd: obsState ? obsState.cmd : null,
+    tool: cmd,
+    ok: !res.error && (typeof res.status !== 'number' || res.status === 0),
+    status: typeof res.status === 'number' ? res.status : null,
+    duration_ms: endMs - startMs,
+    error: res.error ? res.error.message : null,
   });
   if (res.error) {
     fail(`Failed to run ${cmd}: ${res.error.message}`);
@@ -564,10 +908,35 @@ function run(cmd, args, options) {
 }
 
 function runCaptureForErrors(cmd, args, options) {
+  const spanId = obsNextId('exec');
+  const startMs = Date.now();
+  obsEmit({
+    kind: 'exec_start',
+    at: new Date(startMs).toISOString(),
+    span_id: spanId,
+    cmd: obsState ? obsState.cmd : null,
+    tool: cmd,
+    args: redactArgs(args),
+    cwd: options && options.cwd ? options.cwd : null,
+  });
   const res = spawnSync(cmd, args, {
     stdio: ['ignore', 'pipe', 'pipe'],
     encoding: 'utf8',
     ...options,
+  });
+  const endMs = Date.now();
+  obsEmit({
+    kind: 'exec_end',
+    at: new Date(endMs).toISOString(),
+    span_id: spanId,
+    cmd: obsState ? obsState.cmd : null,
+    tool: cmd,
+    ok: !res.error && (typeof res.status !== 'number' || res.status === 0),
+    status: typeof res.status === 'number' ? res.status : null,
+    duration_ms: endMs - startMs,
+    stdout_bytes: typeof res.stdout === 'string' ? Buffer.byteLength(res.stdout, 'utf8') : null,
+    stderr_bytes: typeof res.stderr === 'string' ? Buffer.byteLength(res.stderr, 'utf8') : null,
+    error: res.error ? res.error.message : null,
   });
   if (res.error) {
     fail(`Failed to run ${cmd}: ${res.error.message}`);
@@ -842,7 +1211,7 @@ async function cmdTxStats(opts) {
         maxSupportedTransactionVersion: 0,
       });
     },
-    { wsEndpoints: wsEndpoints || undefined }
+    { wsEndpoints: wsEndpoints || undefined, obsOp: 'getTransaction' }
   );
 
   if (!txInfo) {
@@ -915,7 +1284,7 @@ async function cmdIndexTx(opts) {
       });
       return { txInfo, rpcEndpoint: endpoint };
     },
-    { wsEndpoints: wsEndpoints || undefined }
+    { wsEndpoints: wsEndpoints || undefined, obsOp: 'getTransaction' }
   );
 
   if (!txInfo) {
@@ -927,6 +1296,23 @@ async function cmdIndexTx(opts) {
 
   const record = buildTxIndexRecord({ signature, cluster, rpcEndpoint, txInfo });
   await fsp.appendFile(indexPath, JSON.stringify(record) + '\n', 'utf8');
+
+  const verifierProgramId =
+    manifest && manifest.outputs
+      ? manifest.outputs.verify_onchain_program_id || manifest.outputs.deployed_program_id || null
+      : null;
+  const verifyRec = buildNoirforgeVerifyIndexRecord({
+    signature,
+    cluster,
+    rpcEndpoint,
+    txInfo,
+    programId: verifierProgramId,
+    artifactName: artifactName || null,
+    manifestName: manifest && typeof manifest.name === 'string' ? manifest.name : null,
+  });
+  if (verifyRec) {
+    await fsp.appendFile(indexPath, JSON.stringify(verifyRec) + '\n', 'utf8');
+  }
 
   const heliusEnhanced = envTruthy(opts['helius-enhanced'] || process.env.NOIRFORGE_HELIUS_ENHANCED);
   if (heliusEnhanced) {
@@ -951,6 +1337,164 @@ async function cmdIndexTx(opts) {
   process.stdout.write(`cluster=${cluster}\n`);
   process.stdout.write(`signature=${signature}\n`);
   process.stdout.write(`index_path=${indexPath}\n`);
+}
+
+async function cmdIndexProgram(opts) {
+  const repoRoot = await findRepoRoot(process.cwd());
+  if (!repoRoot) {
+    fail('Could not locate repo root (expected a tool-versions file). Run this from within the noirforge repo.');
+  }
+
+  const artifactName = opts['artifact-name'] || null;
+  const outDir = path.resolve(
+    opts['out-dir'] || (artifactName ? path.join(repoRoot, 'artifacts', artifactName, 'local') : process.cwd())
+  );
+
+  const manifestPath = path.join(outDir, 'noirforge.json');
+  const manifest = await readJsonIfExists(manifestPath);
+
+  const cluster =
+    opts['cluster'] ||
+    (manifest && manifest.outputs
+      ? manifest.outputs.verify_onchain_cluster || manifest.outputs.deployed_cluster || 'devnet'
+      : 'devnet');
+
+  const programId = opts['program-id'] || resolveProgramIdFromManifest(manifest);
+  if (!programId) {
+    fail('Missing --program-id and could not infer program id from manifest outputs. Provide --program-id <pubkey> or run from an artifact directory containing noirforge.json.');
+  }
+
+  let web3;
+  try {
+    web3 = require('@solana/web3.js');
+  } catch {
+    fail('Missing dependency: @solana/web3.js. Run: pnpm -C packages/cli add @solana/web3.js');
+  }
+
+  const endpoints = getRpcEndpoints(web3, cluster, opts);
+  const wsEndpoints = getWsEndpoints(opts);
+
+  const limitRaw = opts.limit;
+  const limit = limitRaw == null ? 100 : Number(limitRaw);
+  if (!Number.isFinite(limit) || limit <= 0) {
+    fail('Invalid --limit (expected a positive number)');
+  }
+  const before = opts.before || null;
+  const until = opts.until || null;
+
+  const indexPath = path.resolve(opts['index-path'] || path.join(outDir, 'noirforge-index.jsonl'));
+  await fsp.mkdir(path.dirname(indexPath), { recursive: true });
+
+  const address = new web3.PublicKey(programId);
+  const sigs = await withRpcConnection(
+    web3,
+    endpoints,
+    async (connection) => {
+      return await connection.getSignaturesForAddress(address, {
+        limit: Math.floor(limit),
+        ...(before ? { before } : {}),
+        ...(until ? { until } : {}),
+      });
+    },
+    { wsEndpoints: wsEndpoints || undefined, obsOp: 'getSignaturesForAddress' }
+  );
+
+  const list = Array.isArray(sigs) ? sigs : [];
+  let written = 0;
+  for (const s of list) {
+    const signature = s && typeof s === 'object' && typeof s.signature === 'string' ? s.signature : null;
+    if (!signature) continue;
+
+    const { txInfo, rpcEndpoint } = await withRpcConnection(
+      web3,
+      endpoints,
+      async (connection, endpoint) => {
+        const txInfo = await connection.getTransaction(signature, {
+          commitment: 'confirmed',
+          maxSupportedTransactionVersion: 0,
+        });
+        return { txInfo, rpcEndpoint: endpoint };
+      },
+      { wsEndpoints: wsEndpoints || undefined, obsOp: 'getTransaction' }
+    );
+
+    if (!txInfo) continue;
+
+    const record = buildTxIndexRecord({ signature, cluster, rpcEndpoint, txInfo });
+    await fsp.appendFile(indexPath, JSON.stringify(record) + '\n', 'utf8');
+
+    const verifyRec = buildNoirforgeVerifyIndexRecord({
+      signature,
+      cluster,
+      rpcEndpoint,
+      txInfo,
+      programId,
+      artifactName: artifactName || null,
+      manifestName: manifest && typeof manifest.name === 'string' ? manifest.name : null,
+    });
+    if (verifyRec) {
+      await fsp.appendFile(indexPath, JSON.stringify(verifyRec) + '\n', 'utf8');
+    }
+
+    written++;
+  }
+
+  process.stdout.write('OK\n');
+  process.stdout.write(`cluster=${cluster}\n`);
+  process.stdout.write(`program_id=${programId}\n`);
+  process.stdout.write(`fetched=${list.length}\n`);
+  process.stdout.write(`indexed=${written}\n`);
+  process.stdout.write(`index_path=${indexPath}\n`);
+}
+
+async function cmdReportIndex(opts) {
+  const repoRoot = await findRepoRoot(process.cwd());
+  if (!repoRoot) {
+    fail('Could not locate repo root (expected a tool-versions file). Run this from within the noirforge repo.');
+  }
+
+  const artifactName = opts['artifact-name'] || null;
+  const outDir = path.resolve(
+    opts['out-dir'] || (artifactName ? path.join(repoRoot, 'artifacts', artifactName, 'local') : process.cwd())
+  );
+  const indexPath = path.resolve(opts['index-path'] || path.join(outDir, 'noirforge-index.jsonl'));
+  const format = String(opts.format || 'json').toLowerCase();
+
+  if (!(await fileExists(indexPath))) {
+    fail(`Index file not found: ${indexPath}`);
+  }
+
+  const txt = await fsp.readFile(indexPath, 'utf8');
+  const records = [];
+  for (const line of txt.split(/\r?\n/g)) {
+    const l = line.trim();
+    if (!l) continue;
+    try {
+      records.push(JSON.parse(l));
+    } catch {
+    }
+  }
+
+  const report = buildIndexReport(records);
+
+  if (format === 'kv') {
+    process.stdout.write('OK\n');
+    process.stdout.write(`index_path=${indexPath}\n`);
+    process.stdout.write(`verify_count=${report.totals.verify_count}\n`);
+    process.stdout.write(`ok_count=${report.totals.ok_count}\n`);
+    process.stdout.write(`err_count=${report.totals.err_count}\n`);
+    if (typeof report.totals.ok_rate === 'number') process.stdout.write(`ok_rate=${report.totals.ok_rate}\n`);
+    if (typeof report.compute_units.p50 === 'number') process.stdout.write(`compute_units_p50=${report.compute_units.p50}\n`);
+    if (typeof report.compute_units.p95 === 'number') process.stdout.write(`compute_units_p95=${report.compute_units.p95}\n`);
+    if (typeof report.index_lag_seconds.p50 === 'number') process.stdout.write(`index_lag_seconds_p50=${report.index_lag_seconds.p50}\n`);
+    if (typeof report.index_lag_seconds.p95 === 'number') process.stdout.write(`index_lag_seconds_p95=${report.index_lag_seconds.p95}\n`);
+    return;
+  }
+
+  if (format !== 'json') {
+    fail('Invalid --format (expected json or kv)');
+  }
+  process.stdout.write(JSON.stringify({ index_path: indexPath, ...report }, null, 2) + '\n');
 }
 
 async function cmdRerunProve(opts) {
@@ -1163,8 +1707,10 @@ async function cmdVerifyOnchain(opts) {
     fail(`Manifest not found or invalid: ${manifestPath}`);
   }
 
-  const proofPath = resolveStoredPath(outDir, manifest.outputs.proof);
-  const pwPath = resolveStoredPath(outDir, manifest.outputs.public_witness);
+  const resolvedOutputs = coreResolveOutputs(manifest, outDir);
+
+  const proofPath = resolveStoredPath(outDir, resolvedOutputs.proof);
+  const pwPath = resolveStoredPath(outDir, resolvedOutputs.public_witness);
   if (!proofPath || !(await fileExists(proofPath))) {
     fail(`Missing proof output in manifest or file not found: ${proofPath}`);
   }
@@ -1203,7 +1749,7 @@ async function cmdVerifyOnchain(opts) {
 
   const proofBytes = await fsp.readFile(proofPath);
   const pwBytes = await fsp.readFile(pwPath);
-  const data = Buffer.concat([proofBytes, pwBytes]);
+  const data = coreBuildInstructionData(proofBytes, pwBytes);
 
   const cuLimitRaw = opts['cu-limit'];
   const cuLimit = cuLimitRaw == null ? 500_000 : Number(cuLimitRaw);
@@ -1228,7 +1774,7 @@ async function cmdVerifyOnchain(opts) {
         commitment: 'confirmed',
       });
     },
-    { wsEndpoints: wsEndpoints || undefined }
+    { wsEndpoints: wsEndpoints || undefined, obsOp: 'sendAndConfirmTransaction' }
   );
 
   const txInfo = await withRpcConnection(
@@ -1240,7 +1786,7 @@ async function cmdVerifyOnchain(opts) {
         maxSupportedTransactionVersion: 0,
       });
     },
-    { wsEndpoints: wsEndpoints || undefined }
+    { wsEndpoints: wsEndpoints || undefined, obsOp: 'getTransaction' }
   );
 
   if (txInfo && txInfo.meta && txInfo.meta.err) {
@@ -1291,8 +1837,10 @@ async function cmdSimulateOnchain(opts) {
     fail(`Manifest not found or invalid: ${manifestPath}`);
   }
 
-  const proofPath = resolveStoredPath(outDir, manifest.outputs.proof);
-  const pwPath = resolveStoredPath(outDir, manifest.outputs.public_witness);
+  const resolvedOutputs = coreResolveOutputs(manifest, outDir);
+
+  const proofPath = resolveStoredPath(outDir, resolvedOutputs.proof);
+  const pwPath = resolveStoredPath(outDir, resolvedOutputs.public_witness);
   if (!proofPath || !(await fileExists(proofPath))) {
     fail(`Missing proof output in manifest or file not found: ${proofPath}`);
   }
@@ -1331,7 +1879,7 @@ async function cmdSimulateOnchain(opts) {
 
   const proofBytes = await fsp.readFile(proofPath);
   const pwBytes = await fsp.readFile(pwPath);
-  const data = Buffer.concat([proofBytes, pwBytes]);
+  const data = coreBuildInstructionData(proofBytes, pwBytes);
 
   const cuLimitRaw = opts['cu-limit'];
   const cuLimit = cuLimitRaw == null ? 500_000 : Number(cuLimitRaw);
@@ -1362,7 +1910,7 @@ async function cmdSimulateOnchain(opts) {
         return await connection.simulateTransaction(tx, [payer], 'confirmed');
       }
     },
-    { wsEndpoints: wsEndpoints || undefined }
+    { wsEndpoints: wsEndpoints || undefined, obsOp: 'simulateTransaction' }
   );
 
   const value = sim && sim.value ? sim.value : null;
@@ -1960,6 +2508,18 @@ async function main() {
       return;
     }
 
+    if (cmd === 'index-program') {
+      await cmdIndexProgram(opts);
+      obsEnd(true);
+      return;
+    }
+
+    if (cmd === 'report-index') {
+      await cmdReportIndex(opts);
+      obsEnd(true);
+      return;
+    }
+
     if (cmd === 'deploy') {
       await cmdDeploy(opts);
       obsEnd(true);
@@ -1989,12 +2549,16 @@ if (require.main === module) {
 module.exports = {
   buildOutputsRel,
   buildTxIndexRecord,
+  buildNoirforgeVerifyIndexRecord,
+  buildIndexReport,
   clusterToRpcUrl,
+  extractInstructionDataForProgram,
   fetchHeliusEnhancedTransactions,
   heliusEnhancedBaseUrlFromCluster,
   getRpcEndpoints,
   getWsEndpoints,
   parseArgs,
+  resolveProgramIdFromManifest,
   findRepoRoot,
   readToolVersions,
 };

@@ -78,11 +78,60 @@ pub fn build_verify_instruction(program_id: Pubkey, proof_bytes: &[u8], public_w
 mod tests {
   use super::*;
 
+  fn parse_kv_text(txt: &str) -> std::collections::BTreeMap<String, String> {
+    let mut out = std::collections::BTreeMap::new();
+    for line in txt.lines() {
+      let line = line.trim();
+      if line.is_empty() {
+        continue;
+      }
+      if let Some((k, v)) = line.split_once('=') {
+        out.insert(k.trim().to_string(), v.trim().to_string());
+      }
+    }
+    out
+  }
+
+  fn hex_to_bytes(hex: &str) -> Vec<u8> {
+    let h = hex.trim();
+    assert!(h.len() % 2 == 0);
+    let mut out = Vec::with_capacity(h.len() / 2);
+    let bytes = h.as_bytes();
+    for i in (0..bytes.len()).step_by(2) {
+      let hi = bytes[i] as char;
+      let lo = bytes[i + 1] as char;
+      let s = format!("{}{}", hi, lo);
+      out.push(u8::from_str_radix(&s, 16).unwrap());
+    }
+    out
+  }
+
   #[test]
   fn instruction_data_is_concatenation() {
     let a = vec![1u8, 2, 3];
     let b = vec![4u8, 5];
     assert_eq!(build_instruction_data(&a, &b), vec![1u8, 2, 3, 4, 5]);
+  }
+
+  #[test]
+  fn instruction_data_matches_golden_vector() {
+    let txt = include_str!(concat!(
+      env!("CARGO_MANIFEST_DIR"),
+      "/../../test-vectors/instruction-data-v1.txt"
+    ));
+    let kv = parse_kv_text(txt);
+
+    let proof = hex_to_bytes(kv.get("proof_hex").unwrap());
+    let witness = hex_to_bytes(kv.get("public_witness_hex").unwrap());
+    let expected = hex_to_bytes(kv.get("instruction_data_hex").unwrap());
+
+    let got = build_instruction_data(&proof, &witness);
+    assert_eq!(got, expected);
+
+    let witness_len: usize = kv.get("public_witness_len").unwrap().parse().unwrap();
+    let (p2, w2) = split_instruction_data(&got, witness_len).unwrap();
+    assert_eq!(p2, proof);
+    assert_eq!(w2, witness);
   }
 
   #[test]

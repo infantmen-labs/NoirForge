@@ -45,7 +45,7 @@ jobs:
         run: |
           set -euo pipefail
           export VERSION="${GITHUB_REF_NAME#v}"
-          node -e "const fs=require('fs'); const v=process.env.VERSION; for (const p of ['packages/sdk-ts/package.json','packages/cli/package.json']) { const j=JSON.parse(fs.readFileSync(p,'utf8')); j.version=v; fs.writeFileSync(p, JSON.stringify(j,null,2)+'\n'); }"
+          node -e "const fs=require('fs'); const v=process.env.VERSION; const pkgs=['packages/core/package.json','packages/sdk-ts/package.json','packages/cli/package.json']; for (const p of pkgs) { const j=JSON.parse(fs.readFileSync(p,'utf8')); j.version=v; if ((p.includes('/sdk-ts/')||p.includes('/cli/')) && j.dependencies && j.dependencies['@noirforge/core']) j.dependencies['@noirforge/core']=v; fs.writeFileSync(p, JSON.stringify(j,null,2)+'\\n'); }"
           python3 - <<'PY'
           import os, re
           v = os.environ['VERSION']
@@ -60,6 +60,9 @@ jobs:
 
       - name: Package sdk-ts dist
         run: tar -czf noirforge-sdk-ts-dist.tgz -C packages/sdk-ts dist package.json
+
+      - name: Package core
+        run: tar -czf noirforge-core.tgz -C packages/core index.js index.d.ts package.json
 
       - name: Package cli
         run: tar -czf noirforge-cli.tgz -C packages/cli bin package.json
@@ -83,6 +86,7 @@ jobs:
         with:
           subject-path: |
             noirforge-sdk-ts-dist.tgz
+            noirforge-core.tgz
             noirforge-cli.tgz
             noirforge-sdk.crate
             sbom.spdx.json
@@ -93,6 +97,7 @@ jobs:
           generate_release_notes: true
           files: |
             noirforge-sdk-ts-dist.tgz
+            noirforge-core.tgz
             noirforge-cli.tgz
             noirforge-sdk.crate
             sbom.spdx.json

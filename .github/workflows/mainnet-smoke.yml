@@ -1,0 +1,75 @@
+name: Mainnet Smoke
+
+"on":
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref to run smoke from (tag like vX.Y.Z, branch, or SHA)"
+        required: false
+        default: ""
+
+jobs:
+  mainnet-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 1.24.12
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.18.1
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.18.3
+
+      - name: pnpm install
+        run: pnpm install --frozen-lockfile
+
+      - name: Install noirup + nargo
+        run: |
+          curl -L https://raw.githubusercontent.com/noir-lang/noirup/main/install | bash
+          echo "$HOME/.nargo/bin" >> "$GITHUB_PATH"
+          "$HOME/.nargo/bin/noirup" -v 1.0.0-beta.13
+          nargo --version
+
+      - name: Install sunspot (pinned)
+        run: |
+          git clone https://github.com/reilabs/sunspot.git "$HOME/sunspot"
+          cd "$HOME/sunspot"
+          git checkout 8e61988da7b35add0e1384962f46c46b367235c1
+          cd go
+          go build -o sunspot .
+          echo "$HOME/sunspot/go" >> "$GITHUB_PATH"
+          sunspot --help
+
+      - name: Install Solana CLI (pinned)
+        run: |
+          sh -c "$(curl -sSfL https://release.solana.com/v2.3.13/install)"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> "$GITHUB_PATH"
+          solana --version
+
+      - name: Configure mainnet payer keypair
+        env:
+          NOIRFORGE_MAINNET_PAYER_JSON: ${{ secrets.NOIRFORGE_MAINNET_PAYER_JSON }}
+        run: |
+          set -euo pipefail
+          if [ -z "${NOIRFORGE_MAINNET_PAYER_JSON}" ]; then
+            echo "Missing required secret: NOIRFORGE_MAINNET_PAYER_JSON" >&2
+            exit 1
+          fi
+          mkdir -p "$HOME/.config/solana"
+          printf '%s' "$NOIRFORGE_MAINNET_PAYER_JSON" > "$HOME/.config/solana/id.json"
+          solana config set --keypair "$HOME/.config/solana/id.json" >/dev/null
+
+      - name: Mainnet smoke (triggered)
+        env:
+          NOIRFORGE_E2E_MAINNET: "1"
+          GNARK_VERIFIER_BIN: $HOME/sunspot/gnark-solana/crates/verifier-bin
+        run: pnpm -C packages/cli test:e2e:mainnet:smoke

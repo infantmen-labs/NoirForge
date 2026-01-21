@@ -7,14 +7,33 @@ const path = require('node:path');
 const {
   buildInstructionData,
   buildVerifyInstruction,
+  assertValidManifestV1,
   loadManifest,
+  loadManifestV1,
+  NoirforgeSdkError,
   RpcError,
   RpcProvider,
   rpcUrlFromCluster,
   resolveOutputs,
+  validateManifestV1,
 } = require('../dist/index.js');
 
 const { PublicKey } = require('@solana/web3.js');
+
+function parseKvText(txt) {
+  const out = {};
+  for (const line of String(txt)
+    .split(/\r?\n/g)
+    .map((l) => l.trim())
+    .filter(Boolean)) {
+    const idx = line.indexOf('=');
+    if (idx === -1) continue;
+    const k = line.slice(0, idx).trim();
+    const v = line.slice(idx + 1).trim();
+    out[k] = v;
+  }
+  return out;
+}
 
 test('loadManifest reads and parses JSON', async () => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'noirforge-sdk-ts-'));
@@ -29,6 +48,54 @@ test('loadManifest reads and parses JSON', async () => {
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }
+});
+
+test('loadManifestV1 reads and validates noirforge manifest v1', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'noirforge-sdk-ts-'));
+  try {
+    const p = path.join(dir, 'noirforge.json');
+    const obj = {
+      schema_version: 1,
+      name: 'sum_a_b',
+      created_at: new Date().toISOString(),
+      circuit_dir: null,
+      proving_system: 'groth16',
+      outputs: {
+        proof: 'proof.bin',
+        public_witness: null,
+      },
+    };
+    await fs.writeFile(p, JSON.stringify(obj), 'utf8');
+
+    const got = await loadManifestV1(p);
+    assert.equal(got.schema_version, 1);
+    assert.equal(got.name, 'sum_a_b');
+    assert.equal(got.proving_system, 'groth16');
+    assert.equal(got.circuit_dir, null);
+    assert.deepEqual(got.outputs, { proof: 'proof.bin', public_witness: null });
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('validateManifestV1 rejects invalid manifests and assertValidManifestV1 throws', () => {
+  const bad = {
+    schema_version: 2,
+    name: '',
+    created_at: '',
+    circuit_dir: 123,
+    proving_system: '',
+    outputs: { ok: 'x', bad: 1 },
+  };
+
+  const res = validateManifestV1(bad);
+  assert.equal(res.ok, false);
+  assert.ok(res.errors.length > 0);
+
+  assert.throws(
+    () => assertValidManifestV1(bad),
+    (e) => e instanceof NoirforgeSdkError && String(e.message).includes('Invalid noirforge manifest')
+  );
 });
 
 test('resolveOutputs resolves file-path outputs_rel but does not path-resolve metadata keys', () => {
@@ -61,6 +128,20 @@ test('buildInstructionData concatenates proof and public witness bytes', () => {
   const b = Buffer.from([4, 5]);
   const out = buildInstructionData(a, b);
   assert.deepEqual([...out], [1, 2, 3, 4, 5]);
+});
+
+test('buildInstructionData matches golden instruction-data-v1 test vector', async () => {
+  const repoRoot = path.resolve(__dirname, '../../..');
+  const p = path.join(repoRoot, 'test-vectors', 'instruction-data-v1.txt');
+  const txt = await fs.readFile(p, 'utf8');
+  const kv = parseKvText(txt);
+
+  const proof = Buffer.from(kv.proof_hex, 'hex');
+  const witness = Buffer.from(kv.public_witness_hex, 'hex');
+  const expected = Buffer.from(kv.instruction_data_hex, 'hex');
+
+  const got = buildInstructionData(proof, witness);
+  assert.equal(got.toString('hex'), expected.toString('hex'));
 });
 
 test('buildVerifyInstruction creates instruction with empty accounts', () => {

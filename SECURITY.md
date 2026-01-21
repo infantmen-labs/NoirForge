@@ -1,5 +1,15 @@
 # Security Policy
 
+## Threat Model
+
+Please see `docs/threat-model.md` for the project’s high-level threat model and security assumptions.
+
+For key custody guidance, see `docs/key-management.md`.
+
+For dependency update and pinning practices, see `docs/dependency-policy.md`.
+
+For mainnet release gating and checklist items, see `docs/mainnet-readiness.md`.
+
 ## Reporting a Vulnerability
 
 If you believe you have found a security vulnerability in NoirForge, please report it responsibly.

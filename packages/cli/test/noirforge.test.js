@@ -4,12 +4,19 @@ const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 
+const bs58Mod = require('bs58');
+const bs58 = bs58Mod && bs58Mod.default ? bs58Mod.default : bs58Mod;
+
 const {
   buildOutputsRel,
   buildTxIndexRecord,
+  buildNoirforgeVerifyIndexRecord,
+  buildIndexReport,
+  extractInstructionDataForProgram,
   fetchHeliusEnhancedTransactions,
   heliusEnhancedBaseUrlFromCluster,
   parseArgs,
+  resolveProgramIdFromManifest,
   findRepoRoot,
   readToolVersions,
   getRpcEndpoints,
@@ -86,6 +93,197 @@ test('buildTxIndexRecord normalizes transaction metadata', () => {
     compute_units: 999,
     err: null,
   });
+});
+
+test('extractInstructionDataForProgram finds and decodes instruction data for a program id', () => {
+  const programId = '11111111111111111111111111111111';
+  const payload = Buffer.from([1, 2, 3, 4, 5]);
+
+  const txInfo = {
+    transaction: {
+      message: {
+        accountKeys: [programId],
+        compiledInstructions: [{ programIdIndex: 0, data: bs58.encode(payload) }],
+      },
+    },
+  };
+
+  const chunks = extractInstructionDataForProgram(txInfo, programId);
+  assert.equal(chunks.length, 1);
+  assert.equal(Buffer.isBuffer(chunks[0]), true);
+  assert.deepEqual([...chunks[0]], [...payload]);
+});
+
+test('buildNoirforgeVerifyIndexRecord emits noirforge_verify when tx contains matching program instruction', () => {
+  const programId = '11111111111111111111111111111111';
+  const payload = Buffer.from([9, 8, 7]);
+  const signature = 'sig';
+
+  const txInfo = {
+    slot: 123,
+    blockTime: 456,
+    meta: {
+      fee: 789,
+      computeUnitsConsumed: 999,
+      err: null,
+    },
+    transaction: {
+      message: {
+        accountKeys: [programId],
+        compiledInstructions: [{ programIdIndex: 0, data: bs58.encode(payload) }],
+      },
+    },
+  };
+
+  const rec = buildNoirforgeVerifyIndexRecord({
+    signature,
+    cluster: 'devnet',
+    rpcEndpoint: 'https://rpc',
+    txInfo,
+    programId,
+    artifactName: 'a',
+    manifestName: 'm',
+    now: 0,
+  });
+
+  assert.deepEqual(rec, {
+    kind: 'noirforge_verify',
+    fetched_at: new Date(0).toISOString(),
+    signature: 'sig',
+    cluster: 'devnet',
+    rpc_endpoint: 'https://rpc',
+    slot: 123,
+    block_time: 456,
+    program_id: programId,
+    artifact_name: 'a',
+    manifest_name: 'm',
+    ok: true,
+    err: null,
+    fee_lamports: 789,
+    compute_units: 999,
+    verify_instruction_count: 1,
+    instruction_data_len: 3,
+  });
+});
+
+test('buildNoirforgeVerifyIndexRecord returns null when tx has no matching program instructions', () => {
+  const txInfo = {
+    transaction: {
+      message: {
+        accountKeys: ['11111111111111111111111111111111'],
+        compiledInstructions: [{ programIdIndex: 0, data: bs58.encode(Buffer.from([1])) }],
+      },
+    },
+  };
+
+  const rec = buildNoirforgeVerifyIndexRecord({
+    signature: 'sig',
+    cluster: 'devnet',
+    rpcEndpoint: 'https://rpc',
+    txInfo,
+    programId: '22222222222222222222222222222222',
+    now: 0,
+  });
+
+  assert.equal(rec, null);
+});
+
+test('buildIndexReport summarizes noirforge_verify records (totals, percentiles, grouping)', () => {
+  const mk = (lagSeconds) => ({ fetched_at: new Date(lagSeconds * 1000).toISOString(), block_time: 0 });
+  const records = [
+    {
+      kind: 'noirforge_verify',
+      ok: true,
+      artifact_name: 'a',
+      program_id: 'p1',
+      compute_units: 100,
+      fee_lamports: 10,
+      instruction_data_len: 50,
+      ...mk(10),
+    },
+    {
+      kind: 'noirforge_verify',
+      ok: false,
+      artifact_name: 'a',
+      program_id: 'p1',
+      compute_units: 300,
+      fee_lamports: 30,
+      instruction_data_len: 70,
+      ...mk(30),
+    },
+    {
+      kind: 'noirforge_verify',
+      ok: true,
+      artifact_name: 'b',
+      program_id: 'p2',
+      compute_units: 200,
+      fee_lamports: 20,
+      instruction_data_len: 60,
+      ...mk(20),
+    },
+    { kind: 'tx' },
+  ];
+
+  const rep = buildIndexReport(records, { now: 0 });
+
+  assert.equal(rep.kind, 'noirforge_index_report');
+  assert.equal(rep.generated_at, new Date(0).toISOString());
+
+  assert.deepEqual(rep.totals, {
+    verify_count: 3,
+    ok_count: 2,
+    err_count: 1,
+    ok_rate: 2 / 3,
+  });
+
+  assert.deepEqual(rep.compute_units, {
+    count: 3,
+    min: 100,
+    max: 300,
+    mean: 200,
+    p50: 200,
+    p95: 200,
+  });
+
+  assert.deepEqual(rep.index_lag_seconds, {
+    count: 3,
+    min: 10,
+    max: 30,
+    mean: 20,
+    p50: 20,
+    p95: 20,
+  });
+
+  assert.equal(rep.by_artifact.a.verify_count, 2);
+  assert.equal(rep.by_artifact.b.verify_count, 1);
+  assert.equal(rep.by_program.p1.verify_count, 2);
+  assert.equal(rep.by_program.p2.verify_count, 1);
+});
+
+test('resolveProgramIdFromManifest prefers verify_onchain_program_id, then deployed_program_id', () => {
+  const m = {
+    outputs: {
+      deployed_program_id: 'deployed',
+      verify_onchain_program_id: 'verify',
+    },
+  };
+  assert.equal(resolveProgramIdFromManifest(m), 'verify');
+});
+
+test('resolveProgramIdFromManifest falls back to built program ids when no deployed ids are present', () => {
+  const m = {
+    outputs: {
+      program_id: 'p',
+      built_program_id: 'b',
+    },
+  };
+  assert.equal(resolveProgramIdFromManifest(m), 'p');
+});
+
+test('resolveProgramIdFromManifest returns null for missing/invalid outputs', () => {
+  assert.equal(resolveProgramIdFromManifest(null), null);
+  assert.equal(resolveProgramIdFromManifest({}), null);
+  assert.equal(resolveProgramIdFromManifest({ outputs: {} }), null);
 });
 
 test('heliusEnhancedBaseUrlFromCluster maps devnet and defaults to mainnet', () => {

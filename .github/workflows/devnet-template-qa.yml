@@ -1,0 +1,72 @@
+name: Devnet Template QA
+
+"on":
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * *"
+
+jobs:
+  devnet-template-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 1.24.12
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.18.1
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.18.3
+
+      - name: pnpm install
+        run: pnpm install --frozen-lockfile
+
+      - name: Install noirup + nargo
+        run: |
+          curl -L https://raw.githubusercontent.com/noir-lang/noirup/main/install | bash
+          echo "$HOME/.nargo/bin" >> "$GITHUB_PATH"
+          "$HOME/.nargo/bin/noirup" -v 1.0.0-beta.13
+          nargo --version
+
+      - name: Install sunspot (pinned)
+        run: |
+          git clone https://github.com/reilabs/sunspot.git "$HOME/sunspot"
+          cd "$HOME/sunspot"
+          git checkout 8e61988da7b35add0e1384962f46c46b367235c1
+          cd go
+          go build -o sunspot .
+          echo "$HOME/sunspot/go" >> "$GITHUB_PATH"
+          sunspot --help
+
+      - name: Install Solana CLI (pinned)
+        run: |
+          sh -c "$(curl -sSfL https://release.solana.com/v2.3.13/install)"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> "$GITHUB_PATH"
+          solana --version
+
+      - name: Configure devnet payer keypair
+        env:
+          NOIRFORGE_DEVNET_PAYER_JSON: ${{ secrets.NOIRFORGE_DEVNET_PAYER_JSON }}
+        run: |
+          set -euo pipefail
+          if [ -z "${NOIRFORGE_DEVNET_PAYER_JSON}" ]; then
+            echo "Missing required secret: NOIRFORGE_DEVNET_PAYER_JSON" >&2
+            exit 1
+          fi
+          mkdir -p "$HOME/.config/solana"
+          printf '%s' "$NOIRFORGE_DEVNET_PAYER_JSON" > "$HOME/.config/solana/id.json"
+          solana config set --keypair "$HOME/.config/solana/id.json" >/dev/null
+          solana airdrop 1 --url devnet >/dev/null 2>&1 || true
+
+      - name: Devnet template QA (triggered)
+        env:
+          NOIRFORGE_E2E_DEVNET_TEMPLATES: "1"
+          NOIRFORGE_E2E_PAYER_PATH: $HOME/.config/solana/id.json
+          GNARK_VERIFIER_BIN: $HOME/sunspot/gnark-solana/crates/verifier-bin
+        run: pnpm -C packages/cli test:e2e:devnet:templates

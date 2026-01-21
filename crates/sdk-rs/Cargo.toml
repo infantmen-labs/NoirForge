@@ -1,9 +1,10 @@
 [package]
 name = "noirforge-sdk"
 version = "0.0.0"
+description = "Rust SDK helpers for NoirForge proof instruction encoding and Solana verify instruction construction."
+license = "Apache-2.0"
 edition = "2021"
 rust-version = "1.90"
-publish = false
 
 [dependencies]
 solana-program = "2"

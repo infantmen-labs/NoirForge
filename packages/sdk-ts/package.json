@@ -1,7 +1,8 @@
 {
   "name": "@noirforge/sdk",
   "version": "0.0.0",
-  "private": true,
+  "description": "TypeScript SDK for verifying NoirForge proofs locally and on Solana.",
+  "license": "Apache-2.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
@@ -13,6 +14,7 @@
     "test": "pnpm build && node --test"
   },
   "dependencies": {
+    "@noirforge/core": "workspace:*",
     "@solana/web3.js": "^1.98.4"
   },
   "devDependencies": {

@@ -2,6 +2,12 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
 import {
+  buildInstructionData as coreBuildInstructionData,
+  resolveOutputs as coreResolveOutputs,
+  validateManifestV1 as coreValidateManifestV1,
+} from '@noirforge/core';
+
+import {
   ComputeBudgetProgram,
   Connection,
   clusterApiUrl,
@@ -199,6 +205,18 @@ export type NoirforgeManifest = {
   toolchain?: Record<string, unknown>;
 };
 
+export type NoirforgeManifestV1 = {
+  schema_version: 1;
+  name: string;
+  created_at: string;
+  circuit_dir: string | null;
+  proving_system: string;
+  outputs: Record<string, string | null>;
+  outputs_rel?: Record<string, string | null>;
+  hashes?: Record<string, string>;
+  toolchain?: Record<string, string>;
+};
+
 export type WalletLike = {
   publicKey: PublicKey;
   signTransaction: (tx: Transaction) => Promise<Transaction>;
@@ -209,28 +227,29 @@ export async function loadManifest(manifestPath: string): Promise<NoirforgeManif
   return JSON.parse(txt) as NoirforgeManifest;
 }
 
-export function resolveOutputs(manifest: NoirforgeManifest, artifactDir: string): Record<string, unknown> {
-  const outputs = (manifest.outputs || {}) as Record<string, unknown>;
-  const outputsRel = (manifest.outputs_rel || {}) as Record<string, unknown>;
-
-  const resolved: Record<string, unknown> = { ...outputs };
-
-  for (const [k, v] of Object.entries(outputsRel)) {
-    if (typeof v === 'string') {
-      const isMetadataKey =
-        k.endsWith('_id') ||
-        k.endsWith('_signature') ||
-        k.endsWith('_cluster') ||
-        k.includes('signature') ||
-        k.includes('cluster');
-
-      resolved[k] = isMetadataKey ? v : path.resolve(artifactDir, v);
-    } else {
-      resolved[k] = v;
-    }
+export function validateManifestV1(x: unknown): { ok: true; manifest: NoirforgeManifestV1 } | { ok: false; errors: string[] } {
+  const res = coreValidateManifestV1(x);
+  if (!res.ok) {
+    return { ok: false, errors: res.errors };
   }
+  return { ok: true, manifest: res.manifest as NoirforgeManifestV1 };
+}
 
-  return resolved;
+export function assertValidManifestV1(x: unknown): NoirforgeManifestV1 {
+  const res = validateManifestV1(x);
+  if (!res.ok) {
+    throw new NoirforgeSdkError(`Invalid noirforge manifest (v1): ${res.errors.join('; ')}`);
+  }
+  return res.manifest;
+}
+
+export async function loadManifestV1(manifestPath: string): Promise<NoirforgeManifestV1> {
+  const manifest = await loadManifest(manifestPath);
+  return assertValidManifestV1(manifest);
+}
+
+export function resolveOutputs(manifest: NoirforgeManifest, artifactDir: string): Record<string, unknown> {
+  return coreResolveOutputs(manifest as any, artifactDir);
 }
 
 export async function readFileBytes(filePath: string): Promise<Buffer> {
@@ -238,7 +257,7 @@ export async function readFileBytes(filePath: string): Promise<Buffer> {
 }
 
 export function buildInstructionData(proofBytes: Buffer, publicWitnessBytes: Buffer): Buffer {
-  return Buffer.concat([proofBytes, publicWitnessBytes]);
+  return coreBuildInstructionData(proofBytes, publicWitnessBytes);
 }
 
 export function buildVerifyInstruction(programId: PublicKey, instructionData: Buffer): TransactionInstruction {
@@ -342,9 +361,11 @@ export type VerifyFromManifestOpts = {
 export async function submitVerifyFromManifest(opts: VerifyFromManifestOpts): Promise<string> {
   const outputs = resolveOutputs(opts.manifest, opts.artifactDir);
 
-  const programIdStr = outputs.deployed_program_id || outputs.built_program_id || outputs.program_id;
+  const programIdStr = outputs.verify_onchain_program_id || outputs.deployed_program_id || outputs.program_id || outputs.built_program_id;
   if (typeof programIdStr !== 'string') {
-    throw new Error('Manifest missing program id (expected outputs.deployed_program_id or outputs.built_program_id or outputs.program_id)');
+    throw new Error(
+      'Manifest missing program id (expected outputs.verify_onchain_program_id or outputs.deployed_program_id or outputs.program_id or outputs.built_program_id)'
+    );
   }
 
   const proofPath = outputs.proof;
@@ -379,9 +400,11 @@ export type VerifyFromManifestWithWalletOpts = {
 export async function submitVerifyFromManifestWithWallet(opts: VerifyFromManifestWithWalletOpts): Promise<string> {
   const outputs = resolveOutputs(opts.manifest, opts.artifactDir);
 
-  const programIdStr = outputs.deployed_program_id || outputs.built_program_id || outputs.program_id;
+  const programIdStr = outputs.verify_onchain_program_id || outputs.deployed_program_id || outputs.program_id || outputs.built_program_id;
   if (typeof programIdStr !== 'string') {
-    throw new Error('Manifest missing program id (expected outputs.deployed_program_id or outputs.built_program_id or outputs.program_id)');
+    throw new Error(
+      'Manifest missing program id (expected outputs.verify_onchain_program_id or outputs.deployed_program_id or outputs.program_id or outputs.built_program_id)'
+    );
   }
 
   const proofPath = outputs.proof;

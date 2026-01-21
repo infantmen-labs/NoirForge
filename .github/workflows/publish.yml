@@ -1,0 +1,216 @@
+name: Publish (Gated)
+
+"on":
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref to publish from (tag like vX.Y.Z, branch, or SHA)"
+        required: false
+        default: ""
+      publish:
+        description: "Set to true to actually publish (otherwise dry-run/package only)"
+        required: false
+        default: "false"
+      npm_tag:
+        description: "npm dist-tag to use (e.g. next, latest)"
+        required: false
+        default: "next"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.18.1
+          registry-url: https://registry.npmjs.org
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.18.3
+
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.90.0
+
+      - name: pnpm install
+        run: pnpm install --frozen-lockfile
+
+      - name: Preflight publish (guardrails)
+        run: |
+          set -euo pipefail
+          if [ "${{ inputs.publish }}" != "true" ]; then
+            echo "publish=false; skipping publish preflight checks"
+            exit 0
+          fi
+
+          ref="${GITHUB_REF_NAME:-}"
+          if [ -n "${{ inputs.ref }}" ]; then
+            ref="${{ inputs.ref }}"
+          fi
+          if ! echo "$ref" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+([-.].*)?$'; then
+            echo "Publish requested but ref is not a release tag (expected vMAJOR.MINOR.PATCH...): $ref" >&2
+            exit 1
+          fi
+
+          node - <<'NODE'
+          const fs = require('fs');
+          function readJson(p) { return JSON.parse(fs.readFileSync(p, 'utf8')); }
+          const pkgs = [
+            'packages/core/package.json',
+            'packages/sdk-ts/package.json',
+            'packages/cli/package.json',
+          ];
+          const bad = [];
+          for (const p of pkgs) {
+            const j = readJson(p);
+            if (j.private === true) bad.push(`${p}: private=true`);
+            if (typeof j.license !== 'string' || j.license.length === 0) bad.push(`${p}: missing license`);
+            if (typeof j.description !== 'string' || j.description.length === 0) bad.push(`${p}: missing description`);
+          }
+          if (bad.length > 0) {
+            console.error('Publish requested but repo is not configured for registry publish:');
+            for (const line of bad) console.error(`- ${line}`);
+            process.exit(1);
+          }
+          NODE
+
+          if grep -Eq '(?m)^publish\s*=\s*false\s*$' crates/sdk-rs/Cargo.toml; then
+            echo "Publish requested but crates/sdk-rs/Cargo.toml has publish=false" >&2
+            exit 1
+          fi
+
+          if ! grep -Eq '(?m)^description\s*=\s*".+"\s*$' crates/sdk-rs/Cargo.toml; then
+            echo "Publish requested but crates/sdk-rs/Cargo.toml is missing [package] description" >&2
+            exit 1
+          fi
+          if ! grep -Eq '(?m)^(license|license-file)\s*=\s*".+"\s*$' crates/sdk-rs/Cargo.toml; then
+            echo "Publish requested but crates/sdk-rs/Cargo.toml is missing [package] license or license-file" >&2
+            exit 1
+          fi
+
+      - name: Determine version
+        id: version
+        run: |
+          set -euo pipefail
+          ref="${GITHUB_REF_NAME:-}"
+          if [ -n "${{ inputs.ref }}" ]; then
+            ref="${{ inputs.ref }}"
+          fi
+
+          if echo "$ref" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+([-.].*)?$'; then
+            echo "version=${ref#v}" >> "$GITHUB_OUTPUT"
+          else
+            node -e "const fs=require('fs'); const j=JSON.parse(fs.readFileSync('packages/sdk-ts/package.json','utf8')); console.log('version='+j.version);" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set package/crate versions from tag (publish only)
+        if: ${{ inputs.publish == 'true' }}
+        run: |
+          set -euo pipefail
+          export VERSION="${{ steps.version.outputs.version }}"
+          node -e "const fs=require('fs'); const v=process.env.VERSION; const pkgs=['packages/core/package.json','packages/sdk-ts/package.json','packages/cli/package.json']; for (const p of pkgs) { const j=JSON.parse(fs.readFileSync(p,'utf8')); j.version=v; if ((p.includes('/sdk-ts/')||p.includes('/cli/')) && j.dependencies && j.dependencies['@noirforge/core']) j.dependencies['@noirforge/core']=v; fs.writeFileSync(p, JSON.stringify(j,null,2)+'\\n'); }"
+          python3 - <<'PY'
+          import os, re
+          v = os.environ['VERSION']
+          p = 'crates/sdk-rs/Cargo.toml'
+          s = open(p,'r',encoding='utf-8').read()
+          s2 = re.sub(r'(?m)^version\s*=\s*\"[^\"]+\"\s*$', f'version = \"{v}\"', s)
+          open(p,'w',encoding='utf-8').write(s2)
+          PY
+
+      - name: Validate publish manifests (publish only)
+        if: ${{ inputs.publish == 'true' }}
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('fs');
+          function readJson(p) { return JSON.parse(fs.readFileSync(p, 'utf8')); }
+          const pkgs = [
+            'packages/core/package.json',
+            'packages/sdk-ts/package.json',
+            'packages/cli/package.json',
+          ];
+          const bad = [];
+          for (const p of pkgs) {
+            const j = readJson(p);
+            for (const depGroup of ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies']) {
+              const deps = j[depGroup];
+              if (!deps) continue;
+              for (const [name, ver] of Object.entries(deps)) {
+                if (typeof ver === 'string' && ver.startsWith('workspace:')) {
+                  bad.push(`${p}: ${depGroup}.${name}=${ver}`);
+                }
+              }
+            }
+          }
+          if (bad.length > 0) {
+            console.error('Publish requested but workspace protocol dependencies remain after version stamping:');
+            for (const line of bad) console.error(`- ${line}`);
+            process.exit(1);
+          }
+          NODE
+
+      - name: Build packages
+        run: |
+          set -euo pipefail
+          pnpm -C packages/sdk-ts build
+
+      - name: NPM pack (sdk)
+        run: |
+          set -euo pipefail
+          cd packages/sdk-ts
+          npm pack
+
+      - name: NPM pack (core)
+        run: |
+          set -euo pipefail
+          cd packages/core
+          npm pack
+
+      - name: NPM pack (cli)
+        run: |
+          set -euo pipefail
+          cd packages/cli
+          npm pack
+
+      - name: Cargo package (sdk)
+        run: |
+          set -euo pipefail
+          cargo package -p noirforge-sdk --allow-dirty
+
+      - name: Publish npm (dry-run default)
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          publish="${{ inputs.publish }}"
+          tag="${{ inputs.npm_tag }}"
+          if [ "$publish" = "true" ]; then
+            pnpm -C packages/core publish --access public --tag "$tag" --no-git-checks
+            pnpm -C packages/sdk-ts publish --access public --tag "$tag" --no-git-checks
+            pnpm -C packages/cli publish --access public --tag "$tag" --no-git-checks
+          else
+            echo "publish=false; skipping npm publish"
+          fi
+
+      - name: Publish crates (dry-run default)
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          set -euo pipefail
+          publish="${{ inputs.publish }}"
+          if [ "$publish" = "true" ]; then
+            cargo publish -p noirforge-sdk --allow-dirty
+          else
+            echo "publish=false; skipping cargo publish"
+          fi

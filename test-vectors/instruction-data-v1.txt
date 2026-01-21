@@ -1,0 +1,4 @@
+proof_hex=01020304
+public_witness_hex=090909
+instruction_data_hex=01020304090909
+public_witness_len=3
