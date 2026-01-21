@@ -228,9 +228,26 @@ jobs:
           publish="${{ inputs.publish }}"
           tag="${{ inputs.npm_tag }}"
           if [ "$publish" = "true" ]; then
-            (cd packages/core && npm publish --access public --tag "$tag")
-            (cd packages/sdk-ts && npm publish --access public --tag "$tag")
-            (cd packages/cli && npm publish --access public --tag "$tag")
+            publish_one() {
+              local dir="$1"
+              local name
+              local ver
+
+              name="$(node -p "require(require('path').resolve(process.argv[1],'package.json')).name" "$dir")"
+              ver="$(node -p "require(require('path').resolve(process.argv[1],'package.json')).version" "$dir")"
+
+              echo "Publishing $name@$ver from $dir"
+              if npm view "$name@$ver" version >/dev/null 2>&1; then
+                echo "Already published: $name@$ver (skipping)"
+                return 0
+              fi
+
+              (cd "$dir" && npm publish --access public --tag "$tag")
+            }
+
+            publish_one packages/core
+            publish_one packages/sdk-ts
+            publish_one packages/cli
           else
             echo "publish=false; skipping npm publish"
           fi
@@ -242,7 +259,23 @@ jobs:
           set -euo pipefail
           publish="${{ inputs.publish }}"
           if [ "$publish" = "true" ]; then
-            cargo publish -p noirforge-sdk --allow-dirty
+            crate="noirforge-sdk"
+            ver="$(python3 - <<'PY'
+import re
+s = open('crates/sdk-rs/Cargo.toml','r',encoding='utf-8').read()
+m = re.search(r'(?m)^version\s*=\s*"([^"]+)"\s*$', s)
+print(m.group(1) if m else '')
+PY
+)"
+            if [ -z "$ver" ]; then
+              echo "Unable to determine $crate version from crates/sdk-rs/Cargo.toml" >&2
+              exit 1
+            fi
+            if curl -fsSL "https://crates.io/api/v1/crates/${crate}/${ver}" >/dev/null 2>&1; then
+              echo "Already published: ${crate}@${ver} (skipping)"
+            else
+              cargo publish -p noirforge-sdk --allow-dirty
+            fi
           else
             echo "publish=false; skipping cargo publish"
           fi
