@@ -260,13 +260,7 @@ jobs:
           publish="${{ inputs.publish }}"
           if [ "$publish" = "true" ]; then
             crate="noirforge-sdk"
-            ver="$(python3 - <<'PY'
-import re
-s = open('crates/sdk-rs/Cargo.toml','r',encoding='utf-8').read()
-m = re.search(r'(?m)^version\s*=\s*"([^"]+)"\s*$', s)
-print(m.group(1) if m else '')
-PY
-)"
+            ver="$(python3 -c 'import re; s=open("crates/sdk-rs/Cargo.toml","r",encoding="utf-8").read(); m=re.search(r"(?m)^version\s*=\s*\"([^\"]+)\"\s*$", s); print(m.group(1) if m else "")')"
             if [ -z "$ver" ]; then
               echo "Unable to determine $crate version from crates/sdk-rs/Cargo.toml" >&2
               exit 1
