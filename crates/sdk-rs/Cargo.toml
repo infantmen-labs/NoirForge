@@ -7,4 +7,4 @@ edition = "2021"
 rust-version = "1.90"
 
 [dependencies]
-solana-program = "2"
+solana-program = "3"
