@@ -120,16 +120,16 @@ jobs:
           }
           NODE
 
-          if grep -Eq '(?m)^publish\s*=\s*false\s*$' crates/sdk-rs/Cargo.toml; then
+          if grep -Eq '^publish[[:space:]]*=[[:space:]]*false[[:space:]]*$' crates/sdk-rs/Cargo.toml; then
             echo "Publish requested but crates/sdk-rs/Cargo.toml has publish=false" >&2
             exit 1
           fi
 
-          if ! grep -Eq '(?m)^description\s*=\s*".+"\s*$' crates/sdk-rs/Cargo.toml; then
+          if ! grep -Eq '^description[[:space:]]*=[[:space:]]*".+"[[:space:]]*$' crates/sdk-rs/Cargo.toml; then
             echo "Publish requested but crates/sdk-rs/Cargo.toml is missing [package] description" >&2
             exit 1
           fi
-          if ! grep -Eq '(?m)^(license|license-file)\s*=\s*".+"\s*$' crates/sdk-rs/Cargo.toml; then
+          if ! grep -Eq '^(license|license-file)[[:space:]]*=[[:space:]]*".+"[[:space:]]*$' crates/sdk-rs/Cargo.toml; then
             echo "Publish requested but crates/sdk-rs/Cargo.toml is missing [package] license or license-file" >&2
             exit 1
           fi
