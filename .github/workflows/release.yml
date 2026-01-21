@@ -125,6 +125,7 @@ jobs:
 
       - name: Attest build provenance
         uses: actions/attest-build-provenance@v3
+        continue-on-error: true
         with:
           subject-path: |
             noirforge-sdk-ts-dist.tgz
