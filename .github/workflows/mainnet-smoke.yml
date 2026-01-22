@@ -82,6 +82,7 @@ jobs:
             echo "Expected gnark verifier-bin directory missing: $HOME/sunspot/gnark-solana/crates/verifier-bin" >&2
             exit 1
           fi
+          echo "GNARK_VERIFIER_BIN=$HOME/sunspot/gnark-solana/crates/verifier-bin" >> "$GITHUB_ENV"
           cd go
           go build -o sunspot .
           echo "$HOME/sunspot/go" >> "$GITHUB_PATH"
@@ -172,5 +173,11 @@ jobs:
       - name: Mainnet smoke (triggered)
         env:
           NOIRFORGE_E2E_MAINNET: "1"
-          GNARK_VERIFIER_BIN: $HOME/sunspot/gnark-solana/crates/verifier-bin
-        run: pnpm -C packages/cli test:e2e:mainnet:smoke
+        run: |
+          set -euo pipefail
+          export GNARK_VERIFIER_BIN="$HOME/sunspot/gnark-solana/crates/verifier-bin"
+          if [ ! -d "$GNARK_VERIFIER_BIN" ]; then
+            echo "GNARK_VERIFIER_BIN directory does not exist: $GNARK_VERIFIER_BIN" >&2
+            exit 1
+          fi
+          pnpm -C packages/cli test:e2e:mainnet:smoke
