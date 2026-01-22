@@ -64,6 +64,7 @@ jobs:
         run: |
           curl -L https://raw.githubusercontent.com/noir-lang/noirup/main/install | bash
           echo "$HOME/.nargo/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.nargo/bin:$PATH"
           "$HOME/.nargo/bin/noirup" -v 1.0.0-beta.13
           nargo --version
 
@@ -75,12 +76,14 @@ jobs:
           cd go
           go build -o sunspot .
           echo "$HOME/sunspot/go" >> "$GITHUB_PATH"
+          export PATH="$HOME/sunspot/go:$PATH"
           sunspot --help
 
       - name: Install Solana CLI (pinned)
         run: |
           sh -c "$(curl -sSfL https://release.solana.com/v2.3.13/install)"
           echo "$HOME/.local/share/solana/install/active_release/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.local/share/solana/install/active_release/bin:$PATH"
           solana --version
 
       - name: Configure mainnet payer keypair
