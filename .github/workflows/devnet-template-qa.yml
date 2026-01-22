@@ -2,6 +2,11 @@ name: Devnet Template QA
 
 "on":
   workflow_dispatch:
+    inputs:
+      template:
+        description: "Run a single template (e.g. sum_a_b). Leave empty to run all templates."
+        required: false
+        default: ""
   schedule:
     - cron: "0 3 * * *"
 
@@ -140,4 +145,5 @@ jobs:
       - name: Devnet template QA (triggered)
         env:
           NOIRFORGE_E2E_DEVNET_TEMPLATES: "1"
+          NOIRFORGE_E2E_TEMPLATE: ${{ inputs.template }}
         run: pnpm -C packages/cli test:e2e:devnet:templates

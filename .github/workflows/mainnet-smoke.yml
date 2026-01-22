@@ -170,6 +170,29 @@ jobs:
           printf '%s' "$NOIRFORGE_MAINNET_PAYER_JSON" > "$HOME/.config/solana/id.json"
           solana config set --keypair "$HOME/.config/solana/id.json" >/dev/null
 
+          payer_pubkey="$(solana address)"
+          payer_balance_sol="$(solana balance --url mainnet-beta | awk '{print $1}')"
+          export NOIRFORGE_MAINNET_PAYER_PUBKEY="$payer_pubkey"
+          export NOIRFORGE_MAINNET_PAYER_BALANCE_SOL="$payer_balance_sol"
+          export NOIRFORGE_MAINNET_PAYER_MIN_SOL="1.0"
+          python3 - <<'PY'
+          import os, sys
+          pubkey = os.environ.get('NOIRFORGE_MAINNET_PAYER_PUBKEY', '').strip()
+          bal_s = os.environ.get('NOIRFORGE_MAINNET_PAYER_BALANCE_SOL', '').strip()
+          min_s = os.environ.get('NOIRFORGE_MAINNET_PAYER_MIN_SOL', '1.0').strip()
+          try:
+            bal = float(bal_s)
+          except Exception:
+            print(f"Unable to parse mainnet payer balance: '{bal_s}' (pubkey={pubkey})", file=sys.stderr)
+            sys.exit(1)
+          min_sol = float(min_s)
+          print(f"Mainnet payer pubkey: {pubkey}")
+          print(f"Mainnet payer balance: {bal} SOL")
+          if bal < min_sol:
+            print(f"Insufficient mainnet payer funds. Need at least {min_sol} SOL for deploy+verify (current {bal} SOL).", file=sys.stderr)
+            sys.exit(1)
+          PY
+
       - name: Mainnet smoke (triggered)
         env:
           NOIRFORGE_E2E_MAINNET: "1"

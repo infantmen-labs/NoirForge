@@ -64,7 +64,14 @@ test(
     }
 
     const repoRoot = path.resolve(__dirname, '../../../../');
-    const templates = await listTemplates(repoRoot);
+    let templates = await listTemplates(repoRoot);
+    const onlyTemplate = process.env.NOIRFORGE_E2E_TEMPLATE;
+    if (onlyTemplate && typeof onlyTemplate === 'string' && onlyTemplate.length > 0) {
+      templates = templates.filter((x) => x === onlyTemplate);
+      if (templates.length === 0) {
+        throw new Error(`Unknown template '${onlyTemplate}'. Available: ${await listTemplates(repoRoot)}`);
+      }
+    }
 
     const payerPath =
       process.env.NOIRFORGE_E2E_PAYER_PATH || path.join(os.homedir(), '.config', 'solana', 'id.json');
@@ -135,6 +142,16 @@ test(
         assert.equal(manifest.outputs.verify_onchain_cluster, 'devnet');
         assert.ok(typeof manifest.outputs.verify_onchain_program_id === 'string');
         assert.ok(typeof manifest.outputs.verify_onchain_signature === 'string');
+
+        process.stdout.write(
+          [
+            `template=${templateName}`,
+            `deployed_program_id=${manifest.outputs.deployed_program_id}`,
+            `deployed_program_deploy_signature=${manifest.outputs.deployed_program_deploy_signature}`,
+            `verify_onchain_program_id=${manifest.outputs.verify_onchain_program_id}`,
+            `verify_onchain_signature=${manifest.outputs.verify_onchain_signature}`,
+          ].join('\n') + '\n'
+        );
       } finally {
         await fs.rm(tmp, { recursive: true, force: true });
         await fs.rm(path.join(repoRoot, 'artifacts', artifactName), { recursive: true, force: true });
