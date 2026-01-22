@@ -83,23 +83,56 @@ jobs:
         run: |
           set -euo pipefail
 
-          url="https://release.solana.com/v2.3.13/install"
+          version="v2.3.13"
+          url="https://release.solana.com/${version}/install"
           tmp="$(mktemp)"
 
+          downloaded="0"
           for attempt in 1 2 3 4 5; do
             if curl -fsSL --retry 5 --retry-delay 2 --retry-all-errors --connect-timeout 20 --max-time 300 "$url" -o "$tmp"; then
+              downloaded="1"
               break
             fi
             echo "Failed to download Solana installer (attempt ${attempt}/5). Retrying..." >&2
             sleep $((attempt * 2))
           done
 
-          if [ ! -s "$tmp" ]; then
-            echo "Failed to download Solana installer from: $url" >&2
-            exit 1
-          fi
+          if [ "$downloaded" = "1" ] && [ -s "$tmp" ]; then
+            sh "$tmp"
+          else
+            echo "Primary Solana installer unreachable: $url" >&2
+            echo "Falling back to GitHub release tarball for ${version}..." >&2
 
-          sh "$tmp"
+            asset_url="https://github.com/anza-xyz/agave/releases/download/${version}/solana-release-x86_64-unknown-linux-gnu.tar.bz2"
+            asset_tmp="$(mktemp)"
+
+            for attempt in 1 2 3 4 5; do
+              if curl -fsSL --retry 5 --retry-delay 2 --retry-all-errors --connect-timeout 20 --max-time 300 "$asset_url" -o "$asset_tmp"; then
+                break
+              fi
+              echo "Failed to download Solana release tarball (attempt ${attempt}/5). Retrying..." >&2
+              sleep $((attempt * 2))
+            done
+
+            if [ ! -s "$asset_tmp" ]; then
+              echo "Failed to download Solana release tarball from: $asset_url" >&2
+              exit 1
+            fi
+
+            release_root="$HOME/.local/share/solana/install/releases/${version}"
+            install_root="$HOME/.local/share/solana/install"
+            mkdir -p "$release_root"
+            tar -xjf "$asset_tmp" -C "$release_root"
+
+            if [ ! -d "$release_root/solana-release" ]; then
+              echo "Unexpected tarball layout; expected $release_root/solana-release" >&2
+              ls -la "$release_root" || true
+              exit 1
+            fi
+
+            mkdir -p "$install_root"
+            ln -sfn "$release_root/solana-release" "$install_root/active_release"
+          fi
 
           solana_bin="$HOME/.local/share/solana/install/active_release/bin"
           echo "$solana_bin" >> "$GITHUB_PATH"
