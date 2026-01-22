@@ -50,6 +50,10 @@ jobs:
         with:
           go-version: 1.24.12
 
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.90.0
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20.18.1
@@ -73,6 +77,11 @@ jobs:
           git clone https://github.com/reilabs/sunspot.git "$HOME/sunspot"
           cd "$HOME/sunspot"
           git checkout 8e61988da7b35add0e1384962f46c46b367235c1
+          git submodule update --init --recursive
+          if [ ! -d "$HOME/sunspot/gnark-solana/crates/verifier-bin" ]; then
+            echo "Expected gnark verifier-bin directory missing: $HOME/sunspot/gnark-solana/crates/verifier-bin" >&2
+            exit 1
+          fi
           cd go
           go build -o sunspot .
           echo "$HOME/sunspot/go" >> "$GITHUB_PATH"
