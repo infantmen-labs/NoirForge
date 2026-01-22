@@ -81,9 +81,37 @@ jobs:
 
       - name: Install Solana CLI (pinned)
         run: |
-          sh -c "$(curl -sSfL https://release.solana.com/v2.3.13/install)"
-          echo "$HOME/.local/share/solana/install/active_release/bin" >> "$GITHUB_PATH"
-          export PATH="$HOME/.local/share/solana/install/active_release/bin:$PATH"
+          set -euo pipefail
+
+          url="https://release.solana.com/v2.3.13/install"
+          tmp="$(mktemp)"
+
+          for attempt in 1 2 3 4 5; do
+            if curl -fsSL --retry 5 --retry-delay 2 --retry-all-errors --connect-timeout 20 --max-time 300 "$url" -o "$tmp"; then
+              break
+            fi
+            echo "Failed to download Solana installer (attempt ${attempt}/5). Retrying..." >&2
+            sleep $((attempt * 2))
+          done
+
+          if [ ! -s "$tmp" ]; then
+            echo "Failed to download Solana installer from: $url" >&2
+            exit 1
+          fi
+
+          sh "$tmp"
+
+          solana_bin="$HOME/.local/share/solana/install/active_release/bin"
+          echo "$solana_bin" >> "$GITHUB_PATH"
+          export PATH="$solana_bin:$PATH"
+
+          if ! command -v solana >/dev/null 2>&1; then
+            echo "Solana CLI install completed but 'solana' not found on PATH." >&2
+            echo "Expected solana at: $solana_bin/solana" >&2
+            ls -la "$solana_bin" || true
+            exit 1
+          fi
+
           solana --version
 
       - name: Configure mainnet payer keypair
