@@ -5,7 +5,7 @@ NoirForge CLI: reproducible Noir + Sunspot pipeline, Solana deploy, and verifica
 ## Install
 
 ```bash
-npm i -g @noirforge/cli
+npm i -g @noirforge/cli@next
 ```
 
 ## Quickstart

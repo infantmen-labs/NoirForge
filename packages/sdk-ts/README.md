@@ -5,7 +5,7 @@ TypeScript SDK for working with NoirForge artifacts and submitting on-chain veri
 ## Install
 
 ```bash
-npm i @noirforge/sdk @solana/web3.js
+npm i @noirforge/sdk@next @solana/web3.js
 ```
 
 ## Key APIs
