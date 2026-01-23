@@ -52,7 +52,7 @@ const sidebars = {
     {
       type: 'category',
       label: 'Operations',
-      items: ['operations/ci-and-releases', 'operations/mainnet'],
+      items: ['operations/ci-and-releases', 'operations/docs-site', 'operations/mainnet'],
     },
     {
       type: 'category',

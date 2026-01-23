@@ -8,6 +8,8 @@
     "noirforge": "node packages/cli/bin/noirforge.js",
     "docs:start": "pnpm -C packages/docs-site start",
     "docs:build": "pnpm -C packages/docs-site build",
+    "docs:serve": "pnpm -C packages/docs-site serve",
+    "docs:clear": "pnpm -C packages/docs-site clear",
     "lint": "echo TODO",
     "test": "pnpm -C packages/cli test && pnpm -C packages/cli test:integration && pnpm -C packages/webhooks test && pnpm -C packages/sdk-ts test",
     "test:e2e:devnet": "pnpm -C packages/cli test:e2e:devnet",
