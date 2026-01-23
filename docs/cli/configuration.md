@@ -93,3 +93,5 @@ Provide an API key via:
 - `--helius-api-key <key>` or `NOIRFORGE_HELIUS_API_KEY=<key>`
 
 When enabled, `index-tx` appends a `kind=tx_enhanced` record to the JSONL index file.
+
+For guidance on handling provider credentials and logs, see `security/secrets-and-credentials`.

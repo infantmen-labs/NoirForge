@@ -11,6 +11,7 @@ NoirForge’s security posture is primarily about:
 
 - Threat model: `threat-model`
 - Key management policy: `key-management`
+- Secrets and credentials: `security/secrets-and-credentials`
 - Dependency policy: `dependency-policy`
 
 ## Mainnet note

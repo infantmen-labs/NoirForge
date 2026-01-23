@@ -84,3 +84,5 @@ The receiver maintains an in-memory idempotency cache.
 - Otherwise it falls back to `X-QN-Nonce` (when present) or `sha256(payload)`.
 
 Duplicate deliveries within the cache TTL are acknowledged with a `200 duplicate` response.
+
+For guidance on handling webhook secrets and logs, see `security/secrets-and-credentials`.
