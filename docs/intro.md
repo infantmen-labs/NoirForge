@@ -11,8 +11,11 @@ It provides:
 
 ## Start here
 
-- Quickstart: `getting-started/quickstart`
-- Devnet demo (hackathon gate): `getting-started/devnet-demo`
+- [Quickstart](/docs/getting-started/quickstart)
+- [Local development environment](/docs/operations/local-development)
+- [Devnet demo (hackathon gate)](/docs/getting-started/devnet-demo)
+- [CLI configuration](/docs/cli/configuration)
+- [Examples](/docs/examples)
 
 ## Core idea
 
