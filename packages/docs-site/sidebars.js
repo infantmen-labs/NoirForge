@@ -10,7 +10,7 @@ const sidebars = {
     {
       type: 'category',
       label: 'Concepts',
-      items: ['concepts/artifacts-and-manifest', 'concepts/instruction-encoding'],
+      items: ['concepts/artifacts-and-manifest', 'concepts/instruction-encoding', 'concepts/indexing-and-observability'],
     },
     {
       type: 'category',
