@@ -65,7 +65,14 @@ const sidebars = {
     {
       type: 'category',
       label: 'Security',
-      items: ['security/overview', 'security/secrets-and-credentials', 'threat-model', 'key-management', 'dependency-policy'],
+      items: [
+        'security/overview',
+        'security/security-policy',
+        'security/secrets-and-credentials',
+        'threat-model',
+        'key-management',
+        'dependency-policy',
+      ],
     },
     {
       type: 'category',
