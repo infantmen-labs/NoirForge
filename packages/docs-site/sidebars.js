@@ -53,7 +53,7 @@ const sidebars = {
     {
       type: 'category',
       label: 'Operations',
-      items: ['operations/ci-and-releases', 'operations/docs-site', 'operations/webhooks', 'operations/mainnet'],
+      items: ['operations/ci-and-releases', 'operations/docker', 'operations/docs-site', 'operations/webhooks', 'operations/mainnet'],
     },
     {
       type: 'category',
