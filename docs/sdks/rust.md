@@ -20,6 +20,12 @@ Key helpers:
 - `build_instruction_data(proof_bytes, public_witness_bytes)`
 - `build_verify_instruction(program_id, proof_bytes, public_witness_bytes)`
 - `parse_public_witness(public_witness_bytes)`
+- `split_instruction_data(instruction_data, public_witness_len)`
+
+Related types:
+
+- `PublicWitness`
+- `DecodeError`
 
 ## Example
 
