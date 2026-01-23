@@ -45,4 +45,8 @@ On-chain commands support failover and basic rate-limit handling:
 - `--rpc-endpoints <csv>`
 - `--ws-endpoints <csv>`
 
+See also:
+
+- [CLI configuration](/docs/cli/configuration)
+
 If you hit rate limits, provide multiple endpoints or switch providers.
