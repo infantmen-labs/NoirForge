@@ -17,6 +17,7 @@ const sidebars = {
       label: 'CLI',
       items: [
         'cli/overview',
+        'cli/configuration',
         'cli/commands',
         {
           type: 'category',
@@ -52,7 +53,7 @@ const sidebars = {
     {
       type: 'category',
       label: 'Operations',
-      items: ['operations/ci-and-releases', 'operations/docs-site', 'operations/mainnet'],
+      items: ['operations/ci-and-releases', 'operations/docs-site', 'operations/webhooks', 'operations/mainnet'],
     },
     {
       type: 'category',
