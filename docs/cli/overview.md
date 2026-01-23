@@ -12,6 +12,10 @@ Run all commands via:
 pnpm noirforge <command>
 ```
 
+## See also
+
+- [CLI configuration](./configuration)
+
 ## Environment requirements
 
 - `nargo` on `PATH`

@@ -35,6 +35,11 @@ The verifier instruction data is:
 
 See `concepts/instruction-encoding`.
 
+## See also
+
+- [CLI configuration](/docs/cli/configuration)
+- [Instruction encoding](/docs/concepts/instruction-encoding)
+
 ## Defaults
 
 - Cluster defaults to `outputs.deployed_cluster` (or `devnet`).

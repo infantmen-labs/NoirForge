@@ -32,6 +32,11 @@ noirforge simulate-onchain \
 - Exits non-zero if the simulation returns an error.
 - Does not update the manifest.
 
+## See also
+
+- [CLI configuration](/docs/cli/configuration)
+- [Instruction encoding](/docs/concepts/instruction-encoding)
+
 ## Mainnet safety
 
 - The CLI refuses `--cluster mainnet-beta` unless you pass `--allow-mainnet`.

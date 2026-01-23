@@ -33,3 +33,7 @@ noirforge report-index \
 ## Notes
 
 - This command expects the index file to be newline-delimited JSON (one record per line).
+
+## See also
+
+- [Indexing and observability](/docs/concepts/indexing-and-observability)

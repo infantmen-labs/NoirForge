@@ -40,6 +40,10 @@ On success, prints:
 - `compute_units` (when available)
 - `err` (when present)
 
+## See also
+
+- [CLI configuration](/docs/cli/configuration)
+
 ## Requirements
 
 - Requires `@solana/web3.js` in the CLI workspace.

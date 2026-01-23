@@ -50,3 +50,8 @@ Prints:
 ## Requirements
 
 - Requires `@solana/web3.js`.
+
+## See also
+
+- [Indexing and observability](/docs/concepts/indexing-and-observability)
+- [CLI configuration](/docs/cli/configuration)

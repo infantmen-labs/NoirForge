@@ -47,3 +47,8 @@ If enabled (`--helius-enhanced 1` or `NOIRFORGE_HELIUS_ENHANCED=1`):
 ## Requirements
 
 - Requires `@solana/web3.js`.
+
+## See also
+
+- [Indexing and observability](/docs/concepts/indexing-and-observability)
+- [CLI configuration](/docs/cli/configuration)
