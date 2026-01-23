@@ -145,5 +145,5 @@ jobs:
       - name: Devnet template QA (triggered)
         env:
           NOIRFORGE_E2E_DEVNET_TEMPLATES: "1"
-          NOIRFORGE_E2E_TEMPLATE: ${{ inputs.template }}
+          NOIRFORGE_E2E_TEMPLATE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.template || '' }}
         run: pnpm -C packages/cli test:e2e:devnet:templates
