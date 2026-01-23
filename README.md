@@ -88,6 +88,12 @@ pnpm test
 - Troubleshooting: `docs/troubleshooting.md`
 - Examples: `examples/`
 
+Documentation UI (local):
+
+```bash
+pnpm docs:start
+```
+
 ## Releases
 
 - Tag pushes matching `vMAJOR.MINOR.PATCH` trigger the GitHub release workflow.

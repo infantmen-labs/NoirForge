@@ -34,10 +34,12 @@ out/
 *.log
 
 artifacts/
-docs/living-spec.md
-docs/sdk-usage.md
-docs/mainnet-runbook.md
 roadmap.md
 hackathon-details.md
 project-overview.md
 problems.md
+docs/sdk-usage.md
+
+# Docusaurus
+packages/docs-site/.docusaurus/
+packages/docs-site/build/

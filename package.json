@@ -6,6 +6,8 @@
   ],
   "scripts": {
     "noirforge": "node packages/cli/bin/noirforge.js",
+    "docs:start": "pnpm -C packages/docs-site start",
+    "docs:build": "pnpm -C packages/docs-site build",
     "lint": "echo TODO",
     "test": "pnpm -C packages/cli test && pnpm -C packages/cli test:integration && pnpm -C packages/webhooks test && pnpm -C packages/sdk-ts test",
     "test:e2e:devnet": "pnpm -C packages/cli test:e2e:devnet",
