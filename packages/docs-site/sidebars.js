@@ -77,7 +77,7 @@ const sidebars = {
     {
       type: 'category',
       label: 'Reference',
-      items: ['template-catalog', 'examples', 'contributing', 'troubleshooting', 'sdk-usage', 'mainnet-readiness', 'mainnet-runbook', 'living-spec'],
+      items: ['template-catalog', 'examples', 'contributing', 'troubleshooting', 'mainnet-readiness', 'mainnet-runbook', 'living-spec'],
     },
   ],
 };
