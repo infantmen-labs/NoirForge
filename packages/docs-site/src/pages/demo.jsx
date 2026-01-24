@@ -1,6 +1,7 @@
 import React from 'react';
 
 import Layout from '@theme/Layout';
+import Link from '@docusaurus/Link';
 
 import styles from './demo.module.css';
 
@@ -190,6 +191,11 @@ export default function Demo() {
             <p className={styles.subtitle}>
               Validate a NoirForge manifest and build verifier instruction data in the browser. Nothing is uploaded.
             </p>
+            <div style={{ marginTop: '0.75rem' }}>
+              <Link className="button button--secondary button--sm" to="/docs/getting-started/live-demo">
+                How to use this demo
+              </Link>
+            </div>
           </header>
 
           <div className={styles.grid}>

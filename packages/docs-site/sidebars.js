@@ -5,7 +5,7 @@ const sidebars = {
     {
       type: 'category',
       label: 'Getting Started',
-      items: ['getting-started/quickstart', 'getting-started/devnet-demo'],
+      items: ['getting-started/quickstart', 'getting-started/live-demo', 'getting-started/devnet-demo'],
     },
     {
       type: 'category',
