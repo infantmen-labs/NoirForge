@@ -22,7 +22,7 @@ node examples/sdk-ts-verify-from-manifest/verify-from-manifest.js \
 
 See also:
 
-- [SDK usage](/docs/sdk-usage)
+- [SDK overview](/docs/sdks/overview)
 - [TypeScript SDK](/docs/sdks/typescript)
 - [CLI configuration](/docs/cli/configuration)
 - [Secrets and credentials](/docs/security/secrets-and-credentials)
