@@ -7,6 +7,12 @@
 - Toolchain pinned in `tool-versions` (`nargo`, `sunspot`, Solana CLI)
 - `GNARK_VERIFIER_BIN` set (required for `deploy`)
 
+## See also
+
+- [Local development environment](/docs/operations/local-development)
+- [CLI configuration](/docs/cli/configuration)
+- [Troubleshooting](/docs/troubleshooting)
+
 ## 1) Initialize a template
 
 ```bash
