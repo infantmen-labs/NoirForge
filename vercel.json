@@ -2,6 +2,6 @@
   "version": 2,
   "framework": "docusaurus-2",
   "installCommand": "pnpm install --frozen-lockfile",
-  "buildCommand": "pnpm docs:build",
+  "buildCommand": "pnpm -C packages/docs-site build",
   "outputDirectory": "packages/docs-site/build"
 }
