@@ -59,3 +59,9 @@ Start a template workspace with:
 ```bash
 pnpm noirforge init <template> <dest>
 ```
+
+## Contributing
+
+If you run into issues or want to improve an example/template, see:
+
+- [Contributing](/docs/contributing)

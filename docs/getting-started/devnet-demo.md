@@ -2,6 +2,11 @@
 
 For hackathon/demo purposes, NoirForge is **devnet-verified** and does not require a mainnet deploy.
 
+## See also
+
+- [Security policy](/docs/security/security-policy)
+- [Mainnet readiness](/docs/mainnet-readiness)
+
 ## Run via GitHub Actions
 
 - Workflow: Actions → Devnet Template QA → Run workflow
