@@ -46,6 +46,27 @@ pnpm noirforge verify-onchain --artifact-name sum_a_b_demo --cluster devnet
 pnpm noirforge tx-stats --artifact-name sum_a_b_demo --cluster devnet
 ```
 
+### RPC providers (Helius / QuickNode)
+
+On-chain and indexing commands support selecting an RPC/WebSocket provider via `--rpc-provider <default|quicknode|helius>`.
+
+For Helius, the recommended setup is to provide a single environment variable:
+
+```bash
+export NOIRFORGE_HELIUS_API_KEY="<your_helius_api_key>"
+```
+
+Then run commands with:
+
+```bash
+pnpm noirforge tx-stats --artifact-name sum_a_b_demo --cluster devnet --rpc-provider helius
+```
+
+For details and override precedence, see:
+
+- `docs/cli/configuration.md`
+- `docs/security/secrets-and-credentials.md`
+
 ## Demo on Devnet (hackathon gate)
 
 For hackathon/demo purposes, NoirForge is devnet-verified and does not require a mainnet deploy.
