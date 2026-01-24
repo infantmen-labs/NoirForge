@@ -35,7 +35,7 @@ test('getWsEndpoints: explicit --ws-url overrides provider selection', () => {
     process.env.NOIRFORGE_RPC_PROVIDER = 'quicknode';
     process.env.NOIRFORGE_QUICKNODE_WS_URL = 'wss://quicknode-ws';
 
-    const got = getWsEndpoints({ 'ws-url': 'wss://explicit-ws', 'rpc-provider': 'quicknode' });
+    const got = getWsEndpoints({ 'ws-url': 'wss://explicit-ws', 'rpc-provider': 'quicknode' }, 'devnet');
     assert.deepEqual(got, ['wss://explicit-ws']);
   } finally {
     for (const k of keys) {
@@ -52,8 +52,46 @@ test('getWsEndpoints: auto-selects quicknode when quicknode ws env endpoints are
     for (const k of ['NOIRFORGE_RPC_PROVIDER', 'NOIRFORGE_WS_URL', 'NOIRFORGE_WS_ENDPOINTS']) delete process.env[k];
     process.env.NOIRFORGE_QUICKNODE_WS_ENDPOINTS = 'wss://qws1, wss://qws2';
 
-    const got = getWsEndpoints({});
+    const got = getWsEndpoints({}, 'devnet');
     assert.deepEqual(got, ['wss://qws1', 'wss://qws2']);
+  } finally {
+    for (const k of keys) {
+      if (prev[k] === undefined) delete process.env[k];
+      else process.env[k] = prev[k];
+    }
+  }
+});
+
+test('getRpcEndpoints: helius provider derives endpoint from NOIRFORGE_HELIUS_API_KEY when no endpoints are configured', () => {
+  const web3 = { clusterApiUrl: (c) => `https://cluster/${c}` };
+
+  const keys = ['NOIRFORGE_RPC_PROVIDER', 'NOIRFORGE_HELIUS_RPC_URL', 'NOIRFORGE_HELIUS_RPC_ENDPOINTS', 'NOIRFORGE_HELIUS_API_KEY'];
+  const prev = Object.fromEntries(keys.map((k) => [k, process.env[k]]));
+  try {
+    for (const k of ['NOIRFORGE_HELIUS_RPC_URL', 'NOIRFORGE_HELIUS_RPC_ENDPOINTS']) delete process.env[k];
+    process.env.NOIRFORGE_RPC_PROVIDER = 'helius';
+    process.env.NOIRFORGE_HELIUS_API_KEY = 'k';
+
+    const got = getRpcEndpoints(web3, 'devnet', { 'rpc-provider': 'helius' });
+    assert.deepEqual(got, ['https://devnet.helius-rpc.com/?api-key=k']);
+  } finally {
+    for (const k of keys) {
+      if (prev[k] === undefined) delete process.env[k];
+      else process.env[k] = prev[k];
+    }
+  }
+});
+
+test('getWsEndpoints: helius provider derives ws endpoint from NOIRFORGE_HELIUS_API_KEY when no endpoints are configured', () => {
+  const keys = ['NOIRFORGE_RPC_PROVIDER', 'NOIRFORGE_HELIUS_WS_URL', 'NOIRFORGE_HELIUS_WS_ENDPOINTS', 'NOIRFORGE_HELIUS_API_KEY'];
+  const prev = Object.fromEntries(keys.map((k) => [k, process.env[k]]));
+  try {
+    for (const k of ['NOIRFORGE_HELIUS_WS_URL', 'NOIRFORGE_HELIUS_WS_ENDPOINTS']) delete process.env[k];
+    process.env.NOIRFORGE_RPC_PROVIDER = 'helius';
+    process.env.NOIRFORGE_HELIUS_API_KEY = 'k';
+
+    const got = getWsEndpoints({ 'rpc-provider': 'helius' }, 'devnet');
+    assert.deepEqual(got, ['wss://devnet.helius-rpc.com/?api-key=k']);
   } finally {
     for (const k of keys) {
       if (prev[k] === undefined) delete process.env[k];

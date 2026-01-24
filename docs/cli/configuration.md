@@ -67,6 +67,9 @@ QuickNode:
 
 Helius:
 
+- Recommended (single setting):
+  - `NOIRFORGE_HELIUS_API_KEY`
+
 - `NOIRFORGE_HELIUS_RPC_URL`
 - `NOIRFORGE_HELIUS_RPC_ENDPOINTS`
 - `NOIRFORGE_HELIUS_WS_URL`

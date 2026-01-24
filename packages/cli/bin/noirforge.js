@@ -526,6 +526,18 @@ function heliusEnhancedBaseUrlFromCluster(cluster) {
   return 'https://api-mainnet.helius-rpc.com';
 }
 
+function heliusRpcUrlFromCluster(cluster, apiKey) {
+  const c = String(cluster || '').toLowerCase();
+  const base = c.includes('devnet') ? 'https://devnet.helius-rpc.com' : 'https://mainnet.helius-rpc.com';
+  return `${base}/?api-key=${encodeURIComponent(String(apiKey))}`;
+}
+
+function heliusWsUrlFromCluster(cluster, apiKey) {
+  const c = String(cluster || '').toLowerCase();
+  const base = c.includes('devnet') ? 'wss://devnet.helius-rpc.com' : 'wss://mainnet.helius-rpc.com';
+  return `${base}/?api-key=${encodeURIComponent(String(apiKey))}`;
+}
+
 async function fetchHeliusEnhancedTransactions({ apiKey, cluster, signatures, fetchFn }) {
   if (!apiKey) throw new Error('Missing Helius API key');
   if (!Array.isArray(signatures) || signatures.length === 0) throw new Error('Missing signatures');
@@ -566,6 +578,7 @@ function getRpcEndpoints(web3, cluster, opts) {
   const quicknodeEndpoints = process.env.NOIRFORGE_QUICKNODE_RPC_ENDPOINTS || null;
   const heliusUrl = process.env.NOIRFORGE_HELIUS_RPC_URL || null;
   const heliusEndpoints = process.env.NOIRFORGE_HELIUS_RPC_ENDPOINTS || null;
+  const heliusApiKey = opts['helius-api-key'] || process.env.NOIRFORGE_HELIUS_API_KEY || null;
 
   const endpoints = [];
   if (explicitUrl && typeof explicitUrl === 'string') endpoints.push(explicitUrl);
@@ -603,9 +616,12 @@ function getRpcEndpoints(web3, cluster, opts) {
       if (heliusEndpoints && typeof heliusEndpoints === 'string') {
         endpoints.push(...heliusEndpoints.split(',').map((s) => s.trim()).filter(Boolean));
       }
+      if (endpoints.length === 0 && heliusApiKey) {
+        endpoints.push(heliusRpcUrlFromCluster(cluster, heliusApiKey));
+      }
       if (endpoints.length === 0) {
         fail(
-          'rpc-provider=helius selected but no Helius endpoints configured. Set NOIRFORGE_HELIUS_RPC_URL or NOIRFORGE_HELIUS_RPC_ENDPOINTS (or pass --rpc-url/--rpc-endpoints).'
+          'rpc-provider=helius selected but no Helius endpoints configured. Set NOIRFORGE_HELIUS_API_KEY (recommended) or NOIRFORGE_HELIUS_RPC_URL / NOIRFORGE_HELIUS_RPC_ENDPOINTS (or pass --rpc-url/--rpc-endpoints).'
         );
       }
     } else {
@@ -616,7 +632,7 @@ function getRpcEndpoints(web3, cluster, opts) {
   return [...new Set(endpoints)];
 }
 
-function getWsEndpoints(opts) {
+function getWsEndpoints(opts, cluster) {
   const explicitUrl = opts['ws-url'] || process.env.NOIRFORGE_WS_URL || null;
   const explicitEndpoints = opts['ws-endpoints'] || process.env.NOIRFORGE_WS_ENDPOINTS || null;
 
@@ -625,6 +641,8 @@ function getWsEndpoints(opts) {
   const quicknodeEndpoints = process.env.NOIRFORGE_QUICKNODE_WS_ENDPOINTS || null;
   const heliusUrl = process.env.NOIRFORGE_HELIUS_WS_URL || null;
   const heliusEndpoints = process.env.NOIRFORGE_HELIUS_WS_ENDPOINTS || null;
+  const heliusApiKey = opts['helius-api-key'] || process.env.NOIRFORGE_HELIUS_API_KEY || null;
+  const resolvedCluster = cluster || opts.cluster || opts['cluster'] || null;
 
   const endpoints = [];
   if (explicitUrl && typeof explicitUrl === 'string') endpoints.push(explicitUrl);
@@ -654,6 +672,9 @@ function getWsEndpoints(opts) {
       if (heliusUrl && typeof heliusUrl === 'string') endpoints.push(heliusUrl);
       if (heliusEndpoints && typeof heliusEndpoints === 'string') {
         endpoints.push(...heliusEndpoints.split(',').map((s) => s.trim()).filter(Boolean));
+      }
+      if (endpoints.length === 0 && heliusApiKey && resolvedCluster) {
+        endpoints.push(heliusWsUrlFromCluster(resolvedCluster, heliusApiKey));
       }
     }
   }
@@ -1201,7 +1222,7 @@ async function cmdTxStats(opts) {
   }
 
   const endpoints = getRpcEndpoints(web3, cluster, opts);
-  const wsEndpoints = getWsEndpoints(opts);
+  const wsEndpoints = getWsEndpoints(opts, cluster);
   const txInfo = await withRpcConnection(
     web3,
     endpoints,
@@ -1272,7 +1293,7 @@ async function cmdIndexTx(opts) {
   }
 
   const endpoints = getRpcEndpoints(web3, cluster, opts);
-  const wsEndpoints = getWsEndpoints(opts);
+  const wsEndpoints = getWsEndpoints(opts, cluster);
 
   const { txInfo, rpcEndpoint } = await withRpcConnection(
     web3,
@@ -1372,7 +1393,7 @@ async function cmdIndexProgram(opts) {
   }
 
   const endpoints = getRpcEndpoints(web3, cluster, opts);
-  const wsEndpoints = getWsEndpoints(opts);
+  const wsEndpoints = getWsEndpoints(opts, cluster);
 
   const limitRaw = opts.limit;
   const limit = limitRaw == null ? 100 : Number(limitRaw);
@@ -1737,7 +1758,7 @@ async function cmdVerifyOnchain(opts) {
   }
 
   const endpoints = getRpcEndpoints(web3, cluster, opts);
-  const wsEndpoints = getWsEndpoints(opts);
+  const wsEndpoints = getWsEndpoints(opts, cluster);
 
   const payerPath = path.resolve(opts['payer'] || process.env.SOLANA_KEYPAIR || path.join(os.homedir(), '.config', 'solana', 'id.json'));
   if (!(await fileExists(payerPath))) {
@@ -1867,7 +1888,7 @@ async function cmdSimulateOnchain(opts) {
   }
 
   const endpoints = getRpcEndpoints(web3, cluster, opts);
-  const wsEndpoints = getWsEndpoints(opts);
+  const wsEndpoints = getWsEndpoints(opts, cluster);
 
   const payerPath = path.resolve(opts['payer'] || process.env.SOLANA_KEYPAIR || path.join(os.homedir(), '.config', 'solana', 'id.json'));
   if (!(await fileExists(payerPath))) {
