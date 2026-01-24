@@ -17,6 +17,9 @@ export default function Home() {
             <Link className="button button--secondary button--lg" to="/docs/intro">
               Read the docs
             </Link>
+            <Link className="button button--outline button--lg" to="/demo">
+              Live demo
+            </Link>
             <Link className="button button--outline button--lg" to="/docs/getting-started/quickstart">
               Quickstart
             </Link>

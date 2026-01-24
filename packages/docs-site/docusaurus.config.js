@@ -40,6 +40,7 @@ const config = {
       title: 'NoirForge',
       items: [
         { to: '/docs/intro', label: 'Docs', position: 'left' },
+        { to: '/demo', label: 'Demo', position: 'left' },
         {
           href: 'https://github.com/infantmen-labs/NoirForge',
           label: 'GitHub',
