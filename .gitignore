@@ -39,6 +39,7 @@ hackathon-details.md
 project-overview.md
 problems.md
 docs/sdk-usage.md
+build/
 
 # Docusaurus
 packages/docs-site/.docusaurus/
