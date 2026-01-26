@@ -34,7 +34,9 @@ out/
 *.log
 
 artifacts/
+bindings/
 roadmap.md
+roadmap-v2.md
 hackathon-details.md
 project-overview.md
 problems.md

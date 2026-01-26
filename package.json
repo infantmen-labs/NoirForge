@@ -6,6 +6,8 @@
   ],
   "scripts": {
     "noirforge": "node packages/cli/bin/noirforge.js",
+    "demo:start": "pnpm -C packages/demo-dapp dev",
+    "demo:build": "pnpm -C packages/demo-dapp build",
     "docs:start": "pnpm -C packages/docs-site start",
     "docs:build": "pnpm -C packages/docs-site build",
     "docs:serve": "pnpm -C packages/docs-site serve",

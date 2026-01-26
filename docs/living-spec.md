@@ -1,4 +1,4 @@
-# NoirForge — Living Spec (internal)
+# NoirForge — Living Spec
 
 This file is a rough, continuously-updated specification of what exists in the repo today.
 
@@ -531,7 +531,7 @@ Third-party audit scope (draft):
 Contingency / alternatives (draft):
 
 - If Sunspot becomes a blocker, evaluate:
-  - Fork + vendor the critical verifier generation components (pin and audit internal fork)
+  - Fork + vendor the critical verifier generation components (pin and audit a dedicated fork)
   - Alternative verifier stacks with Solana-compatible program output
   - Alternative proof systems / prover toolchains (requires reworking templates and verifier program)
 - Selection criteria:

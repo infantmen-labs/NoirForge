@@ -816,6 +816,7 @@ function usage() {
     '',
     'Usage:',
     '  noirforge init <template> [dest]',
+    '  noirforge codegen --artifact-name <name> [--out <dir>] [--out-dir <path>]',
     '  noirforge bench [--circuit-dir <path>] [--artifact-name <name>] [--out-dir <path>] [--cluster <devnet|mainnet-beta|testnet|localhost|url>] [--allow-mainnet] [--cu-limit <n>] [--payer <keypair.json>] [--rpc-provider <default|quicknode|helius>] [--rpc-url <url>] [--rpc-endpoints <csv>] [--ws-url <url>] [--ws-endpoints <csv>]',
     '  noirforge build [--circuit-dir <path>] [--artifact-name <name>] [--out-dir <path>] [--relative-paths-only]',
     '  noirforge compile [--circuit-dir <path>] [--artifact-name <name>] [--out-dir <path>] [--relative-paths-only]',
@@ -1180,6 +1181,199 @@ async function cmdCompile(opts) {
   process.stdout.write(`acir_json=${acirOut}\n`);
   process.stdout.write(`ccs=${ccsOut}\n`);
   process.stdout.write(`manifest=${manifestPath}\n`);
+}
+
+async function cmdCodegen(opts) {
+  const artifactName = opts['artifact-name'];
+  if (!artifactName) {
+    fail('Missing required flag: --artifact-name');
+  }
+
+  const repoRoot = await findRepoRoot(process.cwd());
+  if (!repoRoot) {
+    fail('Could not locate repo root (expected a tool-versions file). Run this from within the noirforge repo.');
+  }
+
+  const artifactDir = path.resolve(opts['out-dir'] || path.join(repoRoot, 'artifacts', artifactName, 'local'));
+  const manifestPath = path.join(artifactDir, 'noirforge.json');
+  const manifest = await readJsonIfExists(manifestPath);
+  if (!manifest || !manifest.outputs) {
+    fail(`Manifest not found or invalid: ${manifestPath}`);
+  }
+
+  const programId = resolveProgramIdFromManifest(manifest);
+  if (!programId) {
+    fail('Could not infer program id from manifest outputs (expected outputs.verify_onchain_program_id or outputs.deployed_program_id).');
+  }
+
+  const resolvedOutputs = coreResolveOutputs(manifest, artifactDir);
+  const outputsRel =
+    manifest.outputs_rel && typeof manifest.outputs_rel === 'object' && manifest.outputs_rel ? manifest.outputs_rel : {};
+  const proofRel =
+    typeof outputsRel.proof === 'string'
+      ? outputsRel.proof
+      : resolvedOutputs && typeof resolvedOutputs.proof === 'string'
+        ? path.basename(resolvedOutputs.proof)
+        : 'proof.proof';
+  const publicWitnessRel =
+    typeof outputsRel.public_witness === 'string'
+      ? outputsRel.public_witness
+      : resolvedOutputs && typeof resolvedOutputs.public_witness === 'string'
+        ? path.basename(resolvedOutputs.public_witness)
+        : 'public_witness.pw';
+
+  const outDir = path.resolve(opts.out || path.join(repoRoot, 'bindings', artifactName));
+  await fsp.mkdir(outDir, { recursive: true });
+
+  const outIndex = path.join(outDir, 'index.ts');
+  const outNode = path.join(outDir, 'node.ts');
+  const outReadme = path.join(outDir, 'README.md');
+
+  if ((await fileExists(outIndex)) || (await fileExists(outNode)) || (await fileExists(outReadme))) {
+    fail(`Refusing to overwrite existing bindings files in: ${outDir}`);
+  }
+
+  const indexTs = [
+    "import { Buffer } from 'buffer';",
+    "import { Connection, ComputeBudgetProgram, Keypair, PublicKey, sendAndConfirmTransaction, Transaction, TransactionInstruction } from '@solana/web3.js';",
+    "import { buildInstructionData as buildNoirforgeInstructionData } from '@noirforge/core';",
+    '',
+    `export const ARTIFACT_NAME = ${JSON.stringify(String(artifactName))};`,
+    `export const DEFAULT_PROGRAM_ID = new PublicKey(${JSON.stringify(String(programId))});`,
+    `export const DEFAULT_PROOF_REL_PATH = ${JSON.stringify(String(proofRel))};`,
+    `export const DEFAULT_PUBLIC_WITNESS_REL_PATH = ${JSON.stringify(String(publicWitnessRel))};`,
+    '',
+    'export function buildInstructionData(proofBytes: Uint8Array, publicWitnessBytes: Uint8Array): Uint8Array {',
+    '  return buildNoirforgeInstructionData(proofBytes, publicWitnessBytes);',
+    '}',
+    '',
+    'export function buildVerifyInstruction(instructionData: Uint8Array, programId: PublicKey = DEFAULT_PROGRAM_ID): TransactionInstruction {',
+    '  return new TransactionInstruction({',
+    '    programId,',
+    '    keys: [],',
+    '    data: Buffer.from(instructionData),',
+    '  });',
+    '}',
+    '',
+    'export async function submitVerifyWithKeypair(',
+    '  connection: Connection,',
+    '  payer: Keypair,',
+    '  instructionData: Uint8Array,',
+    '  opts?: { programId?: PublicKey; cuLimit?: number }',
+    '): Promise<string> {',
+    '  const cuLimit = opts && typeof opts.cuLimit === "number" ? opts.cuLimit : 500_000;',
+    '  const programId = (opts && opts.programId) || DEFAULT_PROGRAM_ID;',
+    '  const computeIx = ComputeBudgetProgram.setComputeUnitLimit({ units: Math.floor(cuLimit) });',
+    '  const verifyIx = buildVerifyInstruction(instructionData, programId);',
+    '  const tx = new Transaction().add(computeIx, verifyIx);',
+    '  return await sendAndConfirmTransaction(connection, tx, [payer], { commitment: "confirmed" });',
+    '}',
+    '',
+    'export async function submitVerifyWithWallet(',
+    '  args: {',
+    '    connection: Connection;',
+    '    publicKey: PublicKey;',
+    '    sendTransaction: (tx: Transaction, connection: Connection, options?: unknown) => Promise<string>;',
+    '    instructionData: Uint8Array;',
+    '    programId?: PublicKey;',
+    '    cuLimit?: number;',
+    '  }',
+    '): Promise<string> {',
+    '  const cuLimit = typeof args.cuLimit === "number" ? args.cuLimit : 500_000;',
+    '  const programId = args.programId || DEFAULT_PROGRAM_ID;',
+    '  const computeIx = ComputeBudgetProgram.setComputeUnitLimit({ units: Math.floor(cuLimit) });',
+    '  const verifyIx = buildVerifyInstruction(args.instructionData, programId);',
+    '  const tx = new Transaction().add(computeIx, verifyIx);',
+    '  const latest = await args.connection.getLatestBlockhash("confirmed");',
+    '  tx.recentBlockhash = latest.blockhash;',
+    '  tx.feePayer = args.publicKey;',
+    '  const sig = await args.sendTransaction(tx, args.connection, { skipPreflight: false });',
+    '  const conf = await args.connection.confirmTransaction(',
+    '    { signature: sig, blockhash: latest.blockhash, lastValidBlockHeight: latest.lastValidBlockHeight },',
+    '    "confirmed"',
+    '  );',
+    '  if (conf.value.err) throw new Error(`Transaction confirmed with error: ${JSON.stringify(conf.value.err)}`);',
+    '  return sig;',
+    '}',
+    '',
+  ].join('\n');
+
+  const nodeTs = [
+    "import { Connection, Keypair, PublicKey } from '@solana/web3.js';",
+    "import * as fs from 'node:fs/promises';",
+    "import * as path from 'node:path';",
+    "import { DEFAULT_PROOF_REL_PATH, DEFAULT_PUBLIC_WITNESS_REL_PATH, DEFAULT_PROGRAM_ID, buildInstructionData, submitVerifyWithKeypair } from './index';",
+    '',
+    'export async function readProofAndPublicWitnessFromArtifactDir(',
+    '  artifactDir: string,',
+    '  opts?: { proofRelPath?: string; publicWitnessRelPath?: string }',
+    '): Promise<{ proofBytes: Uint8Array; publicWitnessBytes: Uint8Array }> {',
+    '  const proofRelPath = (opts && opts.proofRelPath) || DEFAULT_PROOF_REL_PATH;',
+    '  const publicWitnessRelPath = (opts && opts.publicWitnessRelPath) || DEFAULT_PUBLIC_WITNESS_REL_PATH;',
+    '  const proofBytes = await fs.readFile(path.join(artifactDir, proofRelPath));',
+    '  const publicWitnessBytes = await fs.readFile(path.join(artifactDir, publicWitnessRelPath));',
+    '  return { proofBytes, publicWitnessBytes };',
+    '}',
+    '',
+    'export async function submitVerifyFromArtifactDirWithKeypairPath(args: {',
+    '  rpcUrl: string;',
+    '  artifactDir: string;',
+    '  payerPath: string;',
+    '  programId?: string;',
+    '  cuLimit?: number;',
+    '}): Promise<string> {',
+    '  const payerSecret = JSON.parse(await fs.readFile(args.payerPath, "utf8"));',
+    '  const payer = Keypair.fromSecretKey(Uint8Array.from(payerSecret));',
+    '  const connection = new Connection(args.rpcUrl, { commitment: "confirmed" });',
+    '  const { proofBytes, publicWitnessBytes } = await readProofAndPublicWitnessFromArtifactDir(args.artifactDir);',
+    '  const instructionData = buildInstructionData(proofBytes, publicWitnessBytes);',
+    '  const pid = args.programId ? new PublicKey(args.programId) : DEFAULT_PROGRAM_ID;',
+    '  return await submitVerifyWithKeypair(connection, payer, instructionData, { programId: pid, cuLimit: args.cuLimit });',
+    '}',
+    '',
+  ].join('\n');
+
+  const readme = [
+    `# NoirForge generated bindings: ${artifactName}`,
+    '',
+    'This directory was generated by `noirforge codegen`.',
+    '',
+    '## Install deps',
+    '',
+    '```bash',
+    'pnpm add @solana/web3.js @noirforge/core buffer',
+    '```',
+    '',
+    '## Node usage (keypair)',
+    '',
+    '```ts',
+    'import { submitVerifyFromArtifactDirWithKeypairPath } from "./node";',
+    '',
+    'await submitVerifyFromArtifactDirWithKeypairPath({',
+    '  rpcUrl: "https://api.devnet.solana.com",',
+    `  artifactDir: ${JSON.stringify(path.join('artifacts', artifactName, 'local'))},`,
+    '  payerPath: process.env.SOLANA_KEYPAIR || `${process.env.HOME}/.config/solana/id.json`,',
+    '});',
+    '```',
+    '',
+    '## Browser usage (wallet)',
+    '',
+    'Use `submitVerifyWithWallet` by passing `sendTransaction` from your wallet adapter, plus `connection` and `publicKey`.',
+    '',
+  ].join('\n');
+
+  await fsp.writeFile(outIndex, indexTs + '\n', 'utf8');
+  await fsp.writeFile(outNode, nodeTs + '\n', 'utf8');
+  await fsp.writeFile(outReadme, readme + '\n', 'utf8');
+
+  process.stdout.write('OK\n');
+  process.stdout.write(`artifact_name=${artifactName}\n`);
+  process.stdout.write(`artifact_dir=${artifactDir}\n`);
+  process.stdout.write(`program_id=${programId}\n`);
+  process.stdout.write(`out_dir=${outDir}\n`);
+  process.stdout.write(`bindings_index=${outIndex}\n`);
+  process.stdout.write(`bindings_node=${outNode}\n`);
+  process.stdout.write(`bindings_readme=${outReadme}\n`);
 }
 
 async function cmdTxStats(opts) {
@@ -2453,6 +2647,12 @@ async function main() {
   try {
     if (cmd === 'init') {
       await cmdInit(opts);
+      obsEnd(true);
+      return;
+    }
+
+    if (cmd === 'codegen') {
+      await cmdCodegen(opts);
       obsEnd(true);
       return;
     }
