@@ -34,6 +34,7 @@ pnpm noirforge init <template_name> <dest_dir>
 
 - Purpose: Example of proof-gated transfer authorization.
 - Demonstrates: using a proof as a capability for an on-chain action.
+- Notes: public inputs bind `sender`, `recipient`, `mint`, and `amount` (base units). Pubkeys are represented as two `Field` limbs each.
 
 ## `hidden_balances`
 

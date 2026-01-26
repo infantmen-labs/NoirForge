@@ -2,15 +2,35 @@
 
 This is a minimal “proof-gated transfer authorization” toy circuit:
 
-- Public: `recipient`, `amount`, `auth_tag`
+- Public: `sender_0`, `sender_1`, `recipient_0`, `recipient_1`, `mint_0`, `mint_1`, `amount`, `auth_tag`
 - Private: `secret`, `nonce`
 
 Constraints:
 
-- `amount` is boolean (`0` or `1`)
-- `secret + nonce + recipient + amount == auth_tag`
+- `secret + nonce + sender_0 + sender_1 + recipient_0 + recipient_1 + mint_0 + mint_1 + amount == auth_tag`
 
 This models a verifier accepting a transfer only when the prover knows a private authorization secret consistent with a public transfer request.
+
+## Public input encoding
+
+This template is intended to drive a proof-gated SPL token transfer demo.
+
+- `sender`, `recipient`, and `mint` are Solana pubkeys (32 bytes)
+- Each pubkey is encoded as two `Field` limbs:
+  - limb `*_0` is the first 16 bytes (big-endian)
+  - limb `*_1` is the last 16 bytes (big-endian)
+- `amount` is intended to be the SPL token base-unit amount (a positive `u64`)
+
+Public input order in the `.pw` public witness is:
+
+1. `sender_0`
+2. `sender_1`
+3. `recipient_0`
+4. `recipient_1`
+5. `mint_0`
+6. `mint_1`
+7. `amount`
+8. `auth_tag`
 
 ## Quick start (inside this repo)
 

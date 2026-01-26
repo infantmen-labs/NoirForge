@@ -48,7 +48,11 @@ The demo dApp can submit a single transaction that:
 
 Notes:
 
-- The **sender** is always the connected wallet.
+- If you load a `private_transfer_authorization` manifest, the demo dApp will derive the transfer parameters from the uploaded `.pw`:
+  - `sender`, `recipient`, `mint` (Solana pubkeys)
+  - `amount` (base units)
+- In that mode, the mint/recipient/amount inputs are auto-filled and locked, and the demo dApp will reject the transaction unless the derived `sender` matches the connected wallet.
+- For other templates/manifests, the mint/recipient/amount inputs remain manual.
 - If the recipient does not yet have an associated token account (ATA) for the mint, the transaction will create it first.
 
 ## Wallet network

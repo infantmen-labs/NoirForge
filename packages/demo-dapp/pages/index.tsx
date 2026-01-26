@@ -79,6 +79,49 @@ function concatBytes(a: Uint8Array, b: Uint8Array): Uint8Array {
   return out;
 }
 
+function parsePublicWitnessBytes(publicWitnessBytes: Uint8Array): { header: Uint8Array; inputs: Uint8Array[] } {
+  if (publicWitnessBytes.length < 12) {
+    throw new Error('public witness too short');
+  }
+  const header = publicWitnessBytes.slice(0, 12);
+  const rest = publicWitnessBytes.slice(12);
+  if (rest.length % 32 !== 0) {
+    throw new Error('public witness length must be 12 + 32*N');
+  }
+  const inputs: Uint8Array[] = [];
+  for (let i = 0; i < rest.length; i += 32) {
+    inputs.push(rest.slice(i, i + 32));
+  }
+  return { header, inputs };
+}
+
+function fieldChunkToBigintBE(chunk: Uint8Array): bigint {
+  if (chunk.length !== 32) throw new Error('invalid field chunk length');
+  const hex = Buffer.from(chunk).toString('hex');
+  return BigInt(`0x${hex || '00'}`);
+}
+
+function bigintToFixedBytesBE(x: bigint, len: number): Uint8Array {
+  if (x < 0n) throw new Error('negative bigint');
+  const out = new Uint8Array(len);
+  let v = x;
+  for (let i = len - 1; i >= 0; i--) {
+    out[i] = Number(v & 0xffn);
+    v >>= 8n;
+  }
+  if (v !== 0n) throw new Error('bigint does not fit in target length');
+  return out;
+}
+
+function pubkeyFromTwo16ByteLimbs(limb0: bigint, limb1: bigint): PublicKey {
+  const b0 = bigintToFixedBytesBE(limb0, 16);
+  const b1 = bigintToFixedBytesBE(limb1, 16);
+  const out = new Uint8Array(32);
+  out.set(b0, 0);
+  out.set(b1, 16);
+  return new PublicKey(out);
+}
+
 function parseUiAmountToAmount(ui: string, decimals: number): bigint {
   const s = String(ui || '').trim();
   if (!s) throw new Error('Missing amount');
@@ -110,6 +153,8 @@ export default function Home() {
 
   const [manifestText, setManifestText] = React.useState('');
   const [manifestProgramId, setManifestProgramId] = React.useState<string | null>(null);
+  const [manifestName, setManifestName] = React.useState<string | null>(null);
+  const [manifestCircuitDir, setManifestCircuitDir] = React.useState<string | null>(null);
   const [programIdOverride, setProgramIdOverride] = React.useState('');
 
   const [expectedProofFile, setExpectedProofFile] = React.useState<string | null>(null);
@@ -125,6 +170,57 @@ export default function Home() {
   const [tokenMint, setTokenMint] = React.useState('');
   const [tokenRecipient, setTokenRecipient] = React.useState('');
   const [tokenAmount, setTokenAmount] = React.useState('');
+
+  const derivedTransfer = React.useMemo(() => {
+    const isTransferManifest =
+      (manifestCircuitDir && manifestCircuitDir.includes('private_transfer_authorization')) ||
+      (manifestName && manifestName.includes('private_transfer'));
+
+    if (!isTransferManifest) {
+      return { transfer: null as null | { sender: PublicKey; recipient: PublicKey; mint: PublicKey; amountBase: bigint }, error: null as string | null };
+    }
+    if (!witnessBytes) return { transfer: null as null | { sender: PublicKey; recipient: PublicKey; mint: PublicKey; amountBase: bigint }, error: null as string | null };
+
+    try {
+      const pw = parsePublicWitnessBytes(witnessBytes);
+      if (pw.inputs.length < 8) {
+        return { transfer: null, error: null };
+      }
+
+      const sender0 = fieldChunkToBigintBE(pw.inputs[0]);
+      const sender1 = fieldChunkToBigintBE(pw.inputs[1]);
+      const recipient0 = fieldChunkToBigintBE(pw.inputs[2]);
+      const recipient1 = fieldChunkToBigintBE(pw.inputs[3]);
+      const mint0 = fieldChunkToBigintBE(pw.inputs[4]);
+      const mint1 = fieldChunkToBigintBE(pw.inputs[5]);
+      const amount = fieldChunkToBigintBE(pw.inputs[6]);
+
+      const maxU64 = (1n << 64n) - 1n;
+      if (amount <= 0n || amount > maxU64) {
+        throw new Error('derived amount must be a positive u64');
+      }
+
+      const sender = pubkeyFromTwo16ByteLimbs(sender0, sender1);
+      const recipient = pubkeyFromTwo16ByteLimbs(recipient0, recipient1);
+      const mint = pubkeyFromTwo16ByteLimbs(mint0, mint1);
+
+      return { transfer: { sender, recipient, mint, amountBase: amount }, error: null };
+    } catch (e) {
+      return { transfer: null, error: String(e) };
+    }
+  }, [witnessBytes, manifestName, manifestCircuitDir]);
+
+  React.useEffect(() => {
+    const t = derivedTransfer.transfer;
+    if (!t) return;
+    const mintStr = t.mint.toBase58();
+    const recipientStr = t.recipient.toBase58();
+    const amountStr = t.amountBase.toString();
+
+    if (tokenMint !== mintStr) setTokenMint(mintStr);
+    if (tokenRecipient !== recipientStr) setTokenRecipient(recipientStr);
+    if (tokenAmount !== amountStr) setTokenAmount(amountStr);
+  }, [derivedTransfer.transfer, tokenMint, tokenRecipient, tokenAmount]);
 
   const instructionData = React.useMemo(() => {
     if (!proofBytes || !witnessBytes) return null;
@@ -144,6 +240,10 @@ export default function Home() {
 
     try {
       const parsed = JSON.parse(txt);
+      setManifestName(isPlainObject(parsed) && typeof (parsed as any).name === 'string' ? String((parsed as any).name) : null);
+      setManifestCircuitDir(
+        isPlainObject(parsed) && typeof (parsed as any).circuit_dir === 'string' ? String((parsed as any).circuit_dir) : null
+      );
       const pid = extractProgramIdFromManifest(parsed);
       setManifestProgramId(pid);
 
@@ -154,6 +254,8 @@ export default function Home() {
       setStatus(pid ? 'Manifest loaded.' : 'Manifest loaded, but no program id found in outputs.');
     } catch (e) {
       setManifestProgramId(null);
+      setManifestName(null);
+      setManifestCircuitDir(null);
       setExpectedProofFile(null);
       setExpectedWitnessFile(null);
       setStatus(`Failed to parse manifest JSON: ${String(e)}`);
@@ -247,12 +349,21 @@ export default function Home() {
       return;
     }
 
+    const derived = derivedTransfer.transfer;
     const mintStr = tokenMint.trim();
     const recipientStr = tokenRecipient.trim();
     const amountStr = tokenAmount.trim();
-    if (!mintStr || !recipientStr || !amountStr) {
-      setStatus('Fill mint, recipient, and amount.');
-      return;
+
+    if (derived) {
+      if (!publicKey.equals(derived.sender)) {
+        setStatus(`Proof sender does not match connected wallet. Proof sender=${derived.sender.toBase58()}`);
+        return;
+      }
+    } else {
+      if (!mintStr || !recipientStr || !amountStr) {
+        setStatus('Fill mint, recipient, and amount.');
+        return;
+      }
     }
 
     let programKey: PublicKey;
@@ -260,8 +371,8 @@ export default function Home() {
     let recipientKey: PublicKey;
     try {
       programKey = new PublicKey(effectiveProgramId);
-      mintKey = new PublicKey(mintStr);
-      recipientKey = new PublicKey(recipientStr);
+      mintKey = derived ? derived.mint : new PublicKey(mintStr);
+      recipientKey = derived ? derived.recipient : new PublicKey(recipientStr);
     } catch (e) {
       setStatus(`Invalid pubkey: ${String(e)}`);
       return;
@@ -272,7 +383,8 @@ export default function Home() {
 
       const mintInfo = await getMint(connection, mintKey, 'confirmed');
       const decimals = mintInfo.decimals;
-      const amountBase = parseUiAmountToAmount(amountStr, decimals);
+
+      const amountBase = derived ? derived.amountBase : parseUiAmountToAmount(amountStr, decimals);
       if (amountBase <= 0n) {
         setStatus('Amount must be > 0');
         return;
@@ -495,6 +607,7 @@ export default function Home() {
                 <input
                   value={tokenMint}
                   onChange={(e) => setTokenMint(e.target.value)}
+                  disabled={Boolean(derivedTransfer.transfer)}
                   placeholder="Mint address"
                   style={{ width: '100%', padding: '0.6rem 0.75rem', borderRadius: 10, border: '1px solid rgba(255,255,255,0.18)', background: 'rgba(0,0,0,0.25)', color: 'inherit' }}
                 />
@@ -505,6 +618,7 @@ export default function Home() {
                 <input
                   value={tokenRecipient}
                   onChange={(e) => setTokenRecipient(e.target.value)}
+                  disabled={Boolean(derivedTransfer.transfer)}
                   placeholder="Recipient wallet address"
                   style={{ width: '100%', padding: '0.6rem 0.75rem', borderRadius: 10, border: '1px solid rgba(255,255,255,0.18)', background: 'rgba(0,0,0,0.25)', color: 'inherit' }}
                 />
@@ -515,6 +629,7 @@ export default function Home() {
                 <input
                   value={tokenAmount}
                   onChange={(e) => setTokenAmount(e.target.value)}
+                  disabled={Boolean(derivedTransfer.transfer)}
                   placeholder="e.g. 1.5"
                   style={{ width: '100%', padding: '0.6rem 0.75rem', borderRadius: 10, border: '1px solid rgba(255,255,255,0.18)', background: 'rgba(0,0,0,0.25)', color: 'inherit' }}
                 />
@@ -522,6 +637,7 @@ export default function Home() {
 
               <div style={{ fontSize: 12, opacity: 0.75, alignSelf: 'end' }}>
                 This submits a single transaction with: verify instruction → SPL token transfer.
+                {derivedTransfer.error ? <div style={{ marginTop: 6 }}>Public witness parse error: {derivedTransfer.error}</div> : null}
               </div>
             </div>
 
