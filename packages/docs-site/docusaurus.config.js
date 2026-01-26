@@ -25,7 +25,6 @@ const config = {
           path: path.resolve(__dirname, '../../docs'),
           routeBasePath: 'docs',
           sidebarPath: require.resolve('./sidebars.js'),
-          editUrl: 'https://github.com/infantmen-labs/NoirForge/edit/main/docs/',
         },
         blog: false,
         theme: {
@@ -62,9 +61,9 @@ const config = {
         {
           title: 'Packages',
           items: [
-            { label: '@noirforge/cli', href: 'https://www.npmjs.com/package/@noirforge/cli' },
-            { label: '@noirforge/sdk', href: 'https://www.npmjs.com/package/@noirforge/sdk' },
-            { label: '@noirforge/core', href: 'https://www.npmjs.com/package/@noirforge/core' },
+            { label: '@noirforge/cli', href: 'https://www.npmjs.com/package/@noirforge/cli/v/0.1.0-rc.2' },
+            { label: '@noirforge/sdk', href: 'https://www.npmjs.com/package/@noirforge/sdk/v/0.1.0-rc.2' },
+            { label: '@noirforge/core', href: 'https://www.npmjs.com/package/@noirforge/core/v/0.1.0-rc.2' },
             { label: 'noirforge-sdk (Rust)', href: 'https://crates.io/crates/noirforge-sdk' },
           ],
         },
