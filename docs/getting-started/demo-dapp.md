@@ -24,6 +24,8 @@ You need three files from an artifact directory:
 - `artifacts/<artifact_name>/local/<name>.proof`
 - `artifacts/<artifact_name>/local/<name>.pw`
 
+Tip: The canonical proof and witness file names are recorded in `noirforge.json` under `outputs_rel.proof` and `outputs_rel.public_witness`.
+
 ## Wallet network
 
 If your RPC URL is devnet but your wallet is set to mainnet, the wallet popup may show a failed simulation even though the devnet transaction succeeds.

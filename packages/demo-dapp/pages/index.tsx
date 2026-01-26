@@ -26,6 +26,31 @@ function isStringOrNull(x: unknown): x is string | null {
   return typeof x === 'string' || x === null;
 }
 
+function basenameLike(p: string): string {
+  const s = String(p);
+  const parts = s.split(/[/\\]/g);
+  const last = parts.length ? parts[parts.length - 1] : s;
+  return last || s;
+}
+
+function extractExpectedFilesFromManifest(manifest: unknown): { proof: string | null; publicWitness: string | null } {
+  if (!isPlainObject(manifest)) return { proof: null, publicWitness: null };
+  const outputs = isPlainObject(manifest.outputs) ? (manifest.outputs as Record<string, unknown>) : null;
+  const outputsRel = isPlainObject(manifest.outputs_rel) ? (manifest.outputs_rel as Record<string, unknown>) : null;
+
+  const proof =
+    (outputsRel && typeof outputsRel.proof === 'string' ? basenameLike(outputsRel.proof) : null) ||
+    (outputs && typeof outputs.proof === 'string' ? basenameLike(outputs.proof) : null) ||
+    null;
+
+  const publicWitness =
+    (outputsRel && typeof outputsRel.public_witness === 'string' ? basenameLike(outputsRel.public_witness) : null) ||
+    (outputs && typeof outputs.public_witness === 'string' ? basenameLike(outputs.public_witness) : null) ||
+    null;
+
+  return { proof, publicWitness };
+}
+
 function extractProgramIdFromManifest(manifest: unknown): string | null {
   if (!isPlainObject(manifest)) return null;
   const outputs = manifest.outputs;
@@ -69,6 +94,9 @@ export default function Home() {
   const [manifestProgramId, setManifestProgramId] = React.useState<string | null>(null);
   const [programIdOverride, setProgramIdOverride] = React.useState('');
 
+  const [expectedProofFile, setExpectedProofFile] = React.useState<string | null>(null);
+  const [expectedWitnessFile, setExpectedWitnessFile] = React.useState<string | null>(null);
+
   const [proofBytes, setProofBytes] = React.useState<Uint8Array | null>(null);
   const [witnessBytes, setWitnessBytes] = React.useState<Uint8Array | null>(null);
 
@@ -96,9 +124,16 @@ export default function Home() {
       const parsed = JSON.parse(txt);
       const pid = extractProgramIdFromManifest(parsed);
       setManifestProgramId(pid);
+
+      const expected = extractExpectedFilesFromManifest(parsed);
+      setExpectedProofFile(expected.proof);
+      setExpectedWitnessFile(expected.publicWitness);
+
       setStatus(pid ? 'Manifest loaded.' : 'Manifest loaded, but no program id found in outputs.');
     } catch (e) {
       setManifestProgramId(null);
+      setExpectedProofFile(null);
+      setExpectedWitnessFile(null);
       setStatus(`Failed to parse manifest JSON: ${String(e)}`);
     }
   }
@@ -275,6 +310,9 @@ export default function Home() {
             <div style={{ fontWeight: 600, marginBottom: '0.6rem' }}>2) Proof + Public Witness</div>
 
             <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 6 }}>Proof (*.proof)</div>
+            {expectedProofFile ? (
+              <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 6 }}>Expected: {expectedProofFile}</div>
+            ) : null}
             <input
               type="file"
               onChange={async (e) => {
@@ -286,6 +324,9 @@ export default function Home() {
             />
 
             <div style={{ marginTop: '0.75rem', fontSize: 12, opacity: 0.85, marginBottom: 6 }}>Public witness (*.pw)</div>
+            {expectedWitnessFile ? (
+              <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 6 }}>Expected: {expectedWitnessFile}</div>
+            ) : null}
             <input
               type="file"
               onChange={async (e) => {
