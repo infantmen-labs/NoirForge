@@ -1,0 +1,7 @@
+old_commitment = "55"
+new_commitment = "45"
+amount_commitment = "25"
+old_balance = "40"
+new_balance = "30"
+amount = "10"
+nonce = "15"

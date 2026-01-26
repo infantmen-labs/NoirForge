@@ -1,0 +1,6 @@
+[package]
+name = "hidden_balances"
+type = "bin"
+authors = [""]
+
+[dependencies]

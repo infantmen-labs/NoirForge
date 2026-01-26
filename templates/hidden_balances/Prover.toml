@@ -1,0 +1,7 @@
+old_commitment = "15"
+new_commitment = "19"
+delta = "4"
+old_balance = "10"
+old_nonce = "5"
+new_balance = "14"
+new_nonce = "5"

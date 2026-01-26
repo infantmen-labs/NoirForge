@@ -1,0 +1,6 @@
+[package]
+name = "private_kyc_proof"
+type = "bin"
+authors = [""]
+
+[dependencies]

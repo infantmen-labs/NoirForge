@@ -34,3 +34,18 @@ pnpm noirforge init <template_name> <dest_dir>
 
 - Purpose: Example of proof-gated transfer authorization.
 - Demonstrates: using a proof as a capability for an on-chain action.
+
+## `hidden_balances`
+
+- Purpose: Minimal “hidden balances” flow using commitments.
+- Demonstrates: proving a balance update without revealing balances, by verifying public commitments.
+
+## `private_kyc_proof`
+
+- Purpose: Minimal “private KYC proof” flow using a threshold check.
+- Demonstrates: proving a private attribute (age) meets a public requirement (min age) without revealing the attribute.
+
+## `confidential_payments`
+
+- Purpose: Minimal “confidential payments” flow using commitments.
+- Demonstrates: proving a private amount is valid and updates a public balance commitment without revealing balances or amounts.
