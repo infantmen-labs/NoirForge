@@ -10,7 +10,9 @@ For hackathon/demo purposes, NoirForge is **devnet-verified** and does not requi
 ## Run via GitHub Actions
 
 - Workflow: Actions → Devnet Template QA → Run workflow
-- Input: `template=sum_a_b`
+- Recommended: set `template=<name>` to run a single template
+  - Examples: `template=sum_a_b`, `template=hidden_balances`, `template=private_kyc_proof`, `template=confidential_payments`
+- If you leave `template` empty, the workflow runs all templates (slower and more devnet SOL usage).
 
 ## Verified devnet proof (sum_a_b)
 
