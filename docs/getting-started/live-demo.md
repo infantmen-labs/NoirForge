@@ -76,11 +76,13 @@ You can then:
 
 If you want to go beyond the demo UI and submit an on-chain verify transaction:
 
+- [Demo dApp (wallet + on-chain verify)](/docs/getting-started/demo-dapp)
 - `noirforge deploy --cluster devnet`
 - `noirforge verify-onchain --cluster devnet`
 
 See:
 
 - [Devnet demo](/docs/getting-started/devnet-demo)
+- [Demo dApp (wallet + on-chain verify)](/docs/getting-started/demo-dapp)
 - [verify-onchain](/docs/cli/commands/verify-onchain)
 - [Instruction encoding](/docs/concepts/instruction-encoding)

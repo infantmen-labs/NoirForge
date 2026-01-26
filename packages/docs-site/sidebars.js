@@ -5,7 +5,7 @@ const sidebars = {
     {
       type: 'category',
       label: 'Getting Started',
-      items: ['getting-started/quickstart', 'getting-started/live-demo', 'getting-started/devnet-demo'],
+      items: ['getting-started/quickstart', 'getting-started/live-demo', 'getting-started/demo-dapp', 'getting-started/devnet-demo'],
     },
     {
       type: 'category',
@@ -24,6 +24,7 @@ const sidebars = {
           label: 'Command Reference',
           items: [
             'cli/command-init',
+            'cli/command-codegen',
             'cli/command-test',
             'cli/command-compile',
             'cli/command-setup',

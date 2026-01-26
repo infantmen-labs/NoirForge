@@ -816,7 +816,7 @@ function usage() {
     '',
     'Usage:',
     '  noirforge init <template> [dest]',
-    '  noirforge codegen --artifact-name <name> [--out <dir>] [--out-dir <path>]',
+    '  noirforge codegen --artifact-name <name> [--out <dir>] [--out-dir <path>] [--anchor-idl]',
     '  noirforge bench [--circuit-dir <path>] [--artifact-name <name>] [--out-dir <path>] [--cluster <devnet|mainnet-beta|testnet|localhost|url>] [--allow-mainnet] [--cu-limit <n>] [--payer <keypair.json>] [--rpc-provider <default|quicknode|helius>] [--rpc-url <url>] [--rpc-endpoints <csv>] [--ws-url <url>] [--ws-endpoints <csv>]',
     '  noirforge build [--circuit-dir <path>] [--artifact-name <name>] [--out-dir <path>] [--relative-paths-only]',
     '  noirforge compile [--circuit-dir <path>] [--artifact-name <name>] [--out-dir <path>] [--relative-paths-only]',
@@ -869,7 +869,7 @@ function parseArgs(argv) {
     const key = a.slice(2);
     const val = argv[i + 1];
     if (val == null || val.startsWith('--')) {
-      if (key === 'relative-paths-only' || key === 'final' || key === 'allow-mainnet') {
+      if (key === 'relative-paths-only' || key === 'final' || key === 'allow-mainnet' || key === 'anchor-idl') {
         out[key] = true;
         continue;
       }
@@ -1228,8 +1228,15 @@ async function cmdCodegen(opts) {
   const outIndex = path.join(outDir, 'index.ts');
   const outNode = path.join(outDir, 'node.ts');
   const outReadme = path.join(outDir, 'README.md');
+  const outIdl = path.join(outDir, 'idl.json');
+  const wantAnchorIdl = isTruthy(opts['anchor-idl']);
 
-  if ((await fileExists(outIndex)) || (await fileExists(outNode)) || (await fileExists(outReadme))) {
+  if (
+    (await fileExists(outIndex)) ||
+    (await fileExists(outNode)) ||
+    (await fileExists(outReadme)) ||
+    (wantAnchorIdl && (await fileExists(outIdl)))
+  ) {
     fail(`Refusing to overwrite existing bindings files in: ${outDir}`);
   }
 
@@ -1360,11 +1367,46 @@ async function cmdCodegen(opts) {
     '',
     'Use `submitVerifyWithWallet` by passing `sendTransaction` from your wallet adapter, plus `connection` and `publicKey`.',
     '',
+    ...(wantAnchorIdl
+      ? [
+          '## Anchor-like IDL stub',
+          '',
+          'This was generated with `--anchor-idl` as a lightweight compatibility stub (not a full Anchor program).',
+          '',
+        ]
+      : []),
   ].join('\n');
 
   await fsp.writeFile(outIndex, indexTs + '\n', 'utf8');
   await fsp.writeFile(outNode, nodeTs + '\n', 'utf8');
   await fsp.writeFile(outReadme, readme + '\n', 'utf8');
+
+  let idlPath = null;
+  if (wantAnchorIdl) {
+    const idl = {
+      version: '0.1.0',
+      name: String(artifactName)
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9_]+/g, '_')
+        .replace(/^_+|_+$/g, ''),
+      instructions: [
+        {
+          name: 'verify',
+          accounts: [],
+          args: [{ name: 'instructionData', type: 'bytes' }],
+        },
+      ],
+      metadata: {
+        noirforge: {
+          program_id: String(programId),
+          artifact_name: String(artifactName),
+        },
+      },
+    };
+    await fsp.writeFile(outIdl, JSON.stringify(idl, null, 2) + '\n', 'utf8');
+    idlPath = outIdl;
+  }
 
   process.stdout.write('OK\n');
   process.stdout.write(`artifact_name=${artifactName}\n`);
@@ -1374,6 +1416,7 @@ async function cmdCodegen(opts) {
   process.stdout.write(`bindings_index=${outIndex}\n`);
   process.stdout.write(`bindings_node=${outNode}\n`);
   process.stdout.write(`bindings_readme=${outReadme}\n`);
+  if (idlPath) process.stdout.write(`bindings_idl=${idlPath}\n`);
 }
 
 async function cmdTxStats(opts) {

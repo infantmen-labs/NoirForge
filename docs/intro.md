@@ -13,6 +13,7 @@ It provides:
 
 - [Quickstart](/docs/getting-started/quickstart)
 - [Local development environment](/docs/operations/local-development)
+- [Demo dApp (wallet + on-chain verify)](/docs/getting-started/demo-dapp)
 - [Devnet demo (hackathon gate)](/docs/getting-started/devnet-demo)
 - [CLI configuration](/docs/cli/configuration)
 - [Examples](/docs/examples)

@@ -44,3 +44,7 @@ Notes:
 
 - Payer defaults to `~/.config/solana/id.json`.
 - If you hit RPC rate limits, use `--rpc-endpoints <csv>`.
+
+If you want to submit verification from a wallet UI instead of a keypair, see:
+
+- [Demo dApp (wallet + on-chain verify)](/docs/getting-started/demo-dapp)

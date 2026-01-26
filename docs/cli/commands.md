@@ -7,6 +7,7 @@ For detailed behavior and examples, use the per-command pages under `CLI → Com
 ## Project and pipeline
 
 - `init <template> [dest]` → [`commands/init`](commands/init)
+- `codegen --artifact-name <name>` → [`commands/codegen`](commands/codegen)
 - `test --circuit-dir <path>` → [`commands/test`](commands/test)
 - `compile --circuit-dir <path> --artifact-name <name>` → [`commands/compile`](commands/compile)
 - `setup --circuit-dir <path> --artifact-name <name>` → [`commands/setup`](commands/setup)

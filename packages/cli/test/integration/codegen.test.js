@@ -29,6 +29,7 @@ test('noirforge codegen generates TS bindings files (index.ts, node.ts, README.m
   const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'noirforge-it-codegen-'));
   const artifactDir = path.join(tmp, 'artifact');
   const outDir = path.join(tmp, 'out');
+  const outDirWithIdl = path.join(tmp, 'out_with_idl');
   const artifactName = `it_codegen_${Date.now()}`;
 
   try {
@@ -61,12 +62,37 @@ test('noirforge codegen generates TS bindings files (index.ts, node.ts, README.m
     const nodeTs = await fs.readFile(path.join(outDir, 'node.ts'), 'utf8');
     const readme = await fs.readFile(path.join(outDir, 'README.md'), 'utf8');
 
+    const hasIdlDefault = await fs
+      .access(path.join(outDir, 'idl.json'))
+      .then(() => true)
+      .catch(() => false);
+    assert.equal(hasIdlDefault, false, 'idl.json should only be generated when --anchor-idl is set');
+
     assert.match(indexTs, /DEFAULT_PROGRAM_ID/);
     assert.ok(!indexTs.includes('node:fs/promises'), 'index.ts should be browser-safe (no node:fs imports)');
 
     assert.ok(nodeTs.includes('node:fs/promises'), 'node.ts should import node:fs/promises');
 
     assert.ok(readme.includes('buffer'), 'README should mention installing buffer dependency');
+
+    const r2 = runNoirforge(repoRoot, [
+      'codegen',
+      '--artifact-name',
+      artifactName,
+      '--out-dir',
+      artifactDir,
+      '--out',
+      outDirWithIdl,
+      '--anchor-idl',
+    ]);
+    assert.equal(r2.status, 0, r2.stderr || r2.stdout);
+
+    const idlTxt = await fs.readFile(path.join(outDirWithIdl, 'idl.json'), 'utf8');
+    const idl = JSON.parse(idlTxt);
+    assert.ok(idl && typeof idl === 'object');
+    assert.equal(idl.instructions && Array.isArray(idl.instructions), true);
+    assert.equal(idl.instructions[0] && idl.instructions[0].name, 'verify');
+    assert.equal(idl.metadata && idl.metadata.noirforge && idl.metadata.noirforge.program_id, '11111111111111111111111111111111');
   } finally {
     await fs.rm(tmp, { recursive: true, force: true });
   }
