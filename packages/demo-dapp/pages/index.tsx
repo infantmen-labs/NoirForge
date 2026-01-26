@@ -5,8 +5,10 @@ import { Buffer } from 'buffer';
 import Head from 'next/head';
 import dynamic from 'next/dynamic';
 
-import { PublicKey, Transaction, TransactionInstruction } from '@solana/web3.js';
+import { ComputeBudgetProgram, PublicKey, Transaction, TransactionInstruction } from '@solana/web3.js';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
+
+import { createAssociatedTokenAccountInstruction, createTransferCheckedInstruction, getAssociatedTokenAddress, getMint } from '@solana/spl-token';
 
 import { useRpcUrl } from './_app';
 
@@ -77,6 +79,22 @@ function concatBytes(a: Uint8Array, b: Uint8Array): Uint8Array {
   return out;
 }
 
+function parseUiAmountToAmount(ui: string, decimals: number): bigint {
+  const s = String(ui || '').trim();
+  if (!s) throw new Error('Missing amount');
+  if (!Number.isInteger(decimals) || decimals < 0) throw new Error('Invalid mint decimals');
+  if (!/^[0-9]+(\.[0-9]+)?$/.test(s)) throw new Error('Invalid amount format');
+
+  const [wholeRaw, fracRaw] = s.split('.');
+  const whole = wholeRaw || '0';
+  const frac = fracRaw || '';
+  if (frac.length > decimals) throw new Error(`Too many decimal places (max ${decimals})`);
+
+  const fracPadded = frac.padEnd(decimals, '0');
+  const base = 10n ** BigInt(decimals);
+  return BigInt(whole) * base + BigInt(fracPadded || '0');
+}
+
 function explorerTxUrl(signature: string, rpcUrl: string): string {
   const isDevnet = rpcUrl.includes('devnet');
   const isTestnet = rpcUrl.includes('testnet');
@@ -103,6 +121,10 @@ export default function Home() {
   const [status, setStatus] = React.useState<string>('');
   const [txSig, setTxSig] = React.useState<string>('');
   const [logs, setLogs] = React.useState<string[] | null>(null);
+
+  const [tokenMint, setTokenMint] = React.useState('');
+  const [tokenRecipient, setTokenRecipient] = React.useState('');
+  const [tokenAmount, setTokenAmount] = React.useState('');
 
   const instructionData = React.useMemo(() => {
     if (!proofBytes || !witnessBytes) return null;
@@ -203,6 +225,116 @@ export default function Home() {
       setLogs(txInfo?.meta?.logMessages || null);
     } catch (e) {
       setStatus(`Submit failed: ${String(e)}`);
+    }
+  }
+
+  async function submitVerifyAndTransfer() {
+    setTxSig('');
+    setLogs(null);
+
+    if (!publicKey) {
+      setStatus('Connect a wallet first.');
+      return;
+    }
+
+    if (!effectiveProgramId) {
+      setStatus('Missing program id. Load a manifest with outputs.deployed_program_id (or set override).');
+      return;
+    }
+
+    if (!instructionData) {
+      setStatus('Upload both .proof and .pw first.');
+      return;
+    }
+
+    const mintStr = tokenMint.trim();
+    const recipientStr = tokenRecipient.trim();
+    const amountStr = tokenAmount.trim();
+    if (!mintStr || !recipientStr || !amountStr) {
+      setStatus('Fill mint, recipient, and amount.');
+      return;
+    }
+
+    let programKey: PublicKey;
+    let mintKey: PublicKey;
+    let recipientKey: PublicKey;
+    try {
+      programKey = new PublicKey(effectiveProgramId);
+      mintKey = new PublicKey(mintStr);
+      recipientKey = new PublicKey(recipientStr);
+    } catch (e) {
+      setStatus(`Invalid pubkey: ${String(e)}`);
+      return;
+    }
+
+    try {
+      setStatus('Building verify + transfer transaction...');
+
+      const mintInfo = await getMint(connection, mintKey, 'confirmed');
+      const decimals = mintInfo.decimals;
+      const amountBase = parseUiAmountToAmount(amountStr, decimals);
+      if (amountBase <= 0n) {
+        setStatus('Amount must be > 0');
+        return;
+      }
+
+      const senderAta = await getAssociatedTokenAddress(mintKey, publicKey);
+      const recipientAta = await getAssociatedTokenAddress(mintKey, recipientKey);
+
+      const senderAtaInfo = await connection.getAccountInfo(senderAta, 'confirmed');
+      if (!senderAtaInfo) {
+        setStatus(`Sender has no associated token account for this mint: ${senderAta.toBase58()}`);
+        return;
+      }
+
+      const recipientAtaInfo = await connection.getAccountInfo(recipientAta, 'confirmed');
+      const maybeCreateRecipientAtaIx = recipientAtaInfo
+        ? null
+        : createAssociatedTokenAccountInstruction(publicKey, recipientAta, recipientKey, mintKey);
+
+      const computeIx = ComputeBudgetProgram.setComputeUnitLimit({ units: 500_000 });
+
+      const verifyIx = new TransactionInstruction({
+        programId: programKey,
+        keys: [],
+        data: Buffer.from(instructionData),
+      });
+
+      const transferIx = createTransferCheckedInstruction(senderAta, mintKey, recipientAta, publicKey, amountBase, decimals);
+
+      const tx = new Transaction();
+      tx.add(computeIx, verifyIx);
+      if (maybeCreateRecipientAtaIx) tx.add(maybeCreateRecipientAtaIx);
+      tx.add(transferIx);
+
+      const latest = await connection.getLatestBlockhash('confirmed');
+      tx.recentBlockhash = latest.blockhash;
+      tx.feePayer = publicKey;
+
+      setStatus('Requesting wallet signature...');
+      const sig = await sendTransaction(tx, connection, { skipPreflight: false });
+
+      setStatus('Confirming transaction...');
+      const conf = await connection.confirmTransaction(
+        { signature: sig, blockhash: latest.blockhash, lastValidBlockHeight: latest.lastValidBlockHeight },
+        'confirmed'
+      );
+
+      if (conf.value.err) {
+        setTxSig(sig);
+        setStatus(`Transaction confirmed with error: ${JSON.stringify(conf.value.err)}`);
+        const txInfo = await connection.getTransaction(sig, { commitment: 'confirmed', maxSupportedTransactionVersion: 0 });
+        setLogs(txInfo?.meta?.logMessages || null);
+        return;
+      }
+
+      setTxSig(sig);
+      setStatus('Success (verified + transferred).');
+
+      const txInfo = await connection.getTransaction(sig, { commitment: 'confirmed', maxSupportedTransactionVersion: 0 });
+      setLogs(txInfo?.meta?.logMessages || null);
+    } catch (e) {
+      setStatus(`Verify+transfer failed: ${String(e)}`);
     }
   }
 
@@ -346,7 +478,51 @@ export default function Home() {
                 Submit verify
               </button>
 
+              <button
+                type="button"
+                onClick={submitVerifyAndTransfer}
+                style={{ padding: '0.65rem 0.9rem', borderRadius: 10, border: '1px solid rgba(255,255,255,0.18)', background: 'rgba(16,185,129,0.9)', color: 'white', cursor: 'pointer', fontWeight: 600 }}
+              >
+                Verify + Transfer (SPL)
+              </button>
+
               <div style={{ fontSize: 13, opacity: 0.9 }}>{status}</div>
+            </div>
+
+            <div style={{ marginTop: '1rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              <label style={{ display: 'block' }}>
+                <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 6 }}>Token mint</div>
+                <input
+                  value={tokenMint}
+                  onChange={(e) => setTokenMint(e.target.value)}
+                  placeholder="Mint address"
+                  style={{ width: '100%', padding: '0.6rem 0.75rem', borderRadius: 10, border: '1px solid rgba(255,255,255,0.18)', background: 'rgba(0,0,0,0.25)', color: 'inherit' }}
+                />
+              </label>
+
+              <label style={{ display: 'block' }}>
+                <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 6 }}>Recipient</div>
+                <input
+                  value={tokenRecipient}
+                  onChange={(e) => setTokenRecipient(e.target.value)}
+                  placeholder="Recipient wallet address"
+                  style={{ width: '100%', padding: '0.6rem 0.75rem', borderRadius: 10, border: '1px solid rgba(255,255,255,0.18)', background: 'rgba(0,0,0,0.25)', color: 'inherit' }}
+                />
+              </label>
+
+              <label style={{ display: 'block' }}>
+                <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 6 }}>Amount</div>
+                <input
+                  value={tokenAmount}
+                  onChange={(e) => setTokenAmount(e.target.value)}
+                  placeholder="e.g. 1.5"
+                  style={{ width: '100%', padding: '0.6rem 0.75rem', borderRadius: 10, border: '1px solid rgba(255,255,255,0.18)', background: 'rgba(0,0,0,0.25)', color: 'inherit' }}
+                />
+              </label>
+
+              <div style={{ fontSize: 12, opacity: 0.75, alignSelf: 'end' }}>
+                This submits a single transaction with: verify instruction → SPL token transfer.
+              </div>
             </div>
 
             {txSig ? (
