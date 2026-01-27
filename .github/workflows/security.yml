@@ -21,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Generate SBOM (SPDX JSON)
-        uses: anchore/sbom-action@v0.16.0
+        uses: anchore/sbom-action@v0.22.0
         with:
           path: .
           format: spdx-json
