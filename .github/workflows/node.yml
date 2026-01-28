@@ -46,11 +46,8 @@ jobs:
           set -euo pipefail
           export GNARK_VERIFIER_BIN="$HOME/sunspot/gnark-solana/crates/verifier-bin"
           tmpdir="$(mktemp -d)"
-          pnpm noirforge init sum_a_b "$tmpdir/sum_a_b"
-          pnpm noirforge test --circuit-dir "$tmpdir/sum_a_b"
-          pnpm noirforge build --circuit-dir "$tmpdir/sum_a_b" --artifact-name ci_sum_a_b
-          pnpm noirforge prove --circuit-dir "$tmpdir/sum_a_b" --artifact-name ci_sum_a_b
-          pnpm noirforge verify-local --artifact-name ci_sum_a_b
+          pnpm noirforge flow --template sum_a_b --dest "$tmpdir/sum_a_b" --artifact-name ci_sum_a_b --out-dir "$tmpdir/ci_out"
+          pnpm noirforge sizes --artifact-name ci_sum_a_b --out-dir "$tmpdir/ci_out"
           rm -rf "$tmpdir"
 
       - name: Repo tests

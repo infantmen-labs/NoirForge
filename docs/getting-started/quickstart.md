@@ -22,6 +22,9 @@ pnpm noirforge init sum_a_b /tmp/sum_a_b
 ## 2) Run local pipeline
 
 ```bash
+pnpm noirforge flow --circuit-dir /tmp/sum_a_b --artifact-name my_artifact
+
+# equivalent manual steps
 pnpm noirforge test --circuit-dir /tmp/sum_a_b
 pnpm noirforge build --circuit-dir /tmp/sum_a_b --artifact-name my_artifact
 pnpm noirforge prove --circuit-dir /tmp/sum_a_b --artifact-name my_artifact
@@ -35,6 +38,9 @@ Artifacts are written under:
 ## 3) Deploy + verify on devnet (optional)
 
 ```bash
+pnpm noirforge flow --circuit-dir /tmp/sum_a_b --artifact-name my_artifact --cluster devnet
+
+# equivalent manual steps
 pnpm noirforge deploy --artifact-name my_artifact --cluster devnet
 pnpm noirforge verify-onchain --artifact-name my_artifact --cluster devnet
 pnpm noirforge tx-stats --artifact-name my_artifact --cluster devnet

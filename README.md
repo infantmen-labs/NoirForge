@@ -28,6 +28,9 @@ pnpm install
 
 ```bash
 # from repo root
+pnpm noirforge flow --template sum_a_b --dest /tmp/sum_a_b --artifact-name sum_a_b_demo
+
+# equivalent manual steps
 pnpm noirforge init sum_a_b /tmp/sum_a_b
 pnpm noirforge build --circuit-dir /tmp/sum_a_b --artifact-name sum_a_b_demo
 pnpm noirforge prove --circuit-dir /tmp/sum_a_b --artifact-name sum_a_b_demo
@@ -41,6 +44,9 @@ Artifacts are written under:
 ### Deploy + verify on devnet (optional)
 
 ```bash
+pnpm noirforge flow --template sum_a_b --dest /tmp/sum_a_b --artifact-name sum_a_b_demo --cluster devnet
+
+# equivalent manual steps
 pnpm noirforge deploy --artifact-name sum_a_b_demo --cluster devnet
 pnpm noirforge verify-onchain --artifact-name sum_a_b_demo --cluster devnet
 pnpm noirforge tx-stats --artifact-name sum_a_b_demo --cluster devnet
@@ -114,6 +120,9 @@ Documentation UI (local):
 ```bash
 pnpm docs:start
 ```
+
+- Live demo: http://localhost:3000/demo
+- Metrics: http://localhost:3000/metrics
 
 ## Releases
 
