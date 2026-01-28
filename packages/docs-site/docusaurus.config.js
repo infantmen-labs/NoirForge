@@ -42,6 +42,7 @@ const config = {
         { to: '/demo', label: 'Demo', position: 'left' },
         { to: '/metrics', label: 'Metrics', position: 'left' },
         { to: '/templates', label: 'Templates', position: 'left' },
+        { to: '/playground', label: 'Playground', position: 'left' },
         {
           href: 'https://github.com/infantmen-labs/NoirForge',
           label: 'GitHub',
