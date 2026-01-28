@@ -1,0 +1,31 @@
+{
+  "name": "noirforge-vscode",
+  "displayName": "NoirForge",
+  "description": "NoirForge VS Code extension: run NoirForge flows from VS Code.",
+  "version": "0.0.0",
+  "publisher": "infantmen-labs",
+  "license": "Apache-2.0",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./extension.js",
+  "activationEvents": [
+    "onCommand:noirforge.initTemplate",
+    "onCommand:noirforge.flow"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "noirforge.initTemplate",
+        "title": "NoirForge: Init Template"
+      },
+      {
+        "command": "noirforge.flow",
+        "title": "NoirForge: Flow"
+      }
+    ]
+  }
+}
