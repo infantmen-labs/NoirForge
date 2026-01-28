@@ -126,3 +126,26 @@ The report includes percentile summaries for:
 - `fee_lamports`
 - `instruction_data_len`
 - `index_lag_seconds` (derived from `fetched_at - block_time` when available)
+
+## Compute history (JSONL)
+
+`noirforge compute-analyze` appends per-run simulation records to a separate JSONL history file:
+
+- `<artifact_dir>/noirforge-compute.jsonl`
+
+Each record includes:
+
+- `kind=noirforge_simulate`
+- `simulated_at`
+- `cluster`
+- `program_id`
+- `cu_limit`
+- `compute_units_consumed` (when available)
+- `ok` / `err`
+
+You can visualize:
+
+- `noirforge-compute.jsonl` (compute history)
+- `.proof`/`.pw` sizes
+
+in the docs-site `/metrics` page.

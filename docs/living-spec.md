@@ -323,8 +323,25 @@ Requirements:
 Behavior:
 
 - Prints simulation logs to stdout
+- Prints a short key/value summary including `cluster`, `program_id`, and `compute_units_consumed` when available
 - Exits non-zero if the simulation returns an error
 - Does not update the manifest
+
+### `noirforge sizes`
+
+Prints byte sizes for key verifier inputs derived from an artifact manifest:
+
+- `proof_bytes`
+- `public_witness_bytes`
+- `instruction_data_bytes` (computed as `proof_bytes + public_witness_bytes`)
+
+### `noirforge compute-analyze`
+
+Runs `simulateTransaction` for the deployed verifier program, extracts `compute_units_consumed` when available, and appends a JSONL record.
+
+Defaults:
+
+- History path: `artifacts/<artifact_name>/local/noirforge-compute.jsonl`
 
 ### `noirforge tx-stats`
 
@@ -367,6 +384,31 @@ Optional:
 Outputs:
 
 - `build_ms`, `prove_ms`, `verify_local_ms`
+- If `--cluster` is used: `deploy_ms`, `verify_onchain_ms`, `tx_stats_ms`
+
+### `noirforge flow`
+
+Runs a single end-to-end “ZK flow harness” for a circuit.
+
+Runs:
+
+- Optional: `noirforge init <template> <dest>` (when `--template` is provided)
+- `noirforge test`
+- `noirforge build`
+- `noirforge prove`
+- `noirforge verify-local`
+
+Optional:
+
+- With `--cluster <...>` it will also run:
+  - `noirforge deploy --cluster <...>`
+  - `noirforge verify-onchain --cluster <...>`
+  - `noirforge tx-stats --cluster <...>`
+
+Outputs:
+
+- `test_ms`, `build_ms`, `prove_ms`, `verify_local_ms`
+- If `--template` is used: `template`, `dest`, `init_ms`
 - If `--cluster` is used: `deploy_ms`, `verify_onchain_ms`, `tx_stats_ms`
 
 ### `noirforge deploy`

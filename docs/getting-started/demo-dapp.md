@@ -39,6 +39,15 @@ pnpm noirforge verify-onchain --artifact-name <artifact_name> --cluster devnet -
 
   - Or paste a Program ID into the “Program ID override” field.
 
+Example (proof-gated SPL transfer):
+
+- Artifacts:
+  - `artifacts/private_transfer_auth_from_template/local/noirforge.json`
+  - `artifacts/private_transfer_auth_from_template/local/private_transfer_authorization.proof`
+  - `artifacts/private_transfer_auth_from_template/local/private_transfer_authorization.pw`
+- Program ID (devnet): `2DbKgTxPqF2pk835bqetK7RqcAudUhbTcPE7wVWuMprr`
+- Example verify+transfer tx (devnet): https://explorer.solana.com/tx/2bhiT1WVM66PYixGbhAaeoV5qKaVeswQQbuWDm12sJXnr7FuoerXm4x7JzmJJ8KtXrGMwDwPb6yTtYpDjuQGyhry?cluster=devnet
+
 ## Verify + Transfer (SPL)
 
 The demo dApp can submit a single transaction that:

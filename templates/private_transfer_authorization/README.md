@@ -56,6 +56,11 @@ pnpm noirforge deploy --artifact-name private_transfer_auth_from_template --clus
 pnpm noirforge verify-onchain --artifact-name private_transfer_auth_from_template --cluster devnet
 ```
 
+Devnet example:
+
+- Program ID (devnet): `2DbKgTxPqF2pk835bqetK7RqcAudUhbTcPE7wVWuMprr`
+- Example verify+transfer tx (devnet): https://explorer.solana.com/tx/2bhiT1WVM66PYixGbhAaeoV5qKaVeswQQbuWDm12sJXnr7FuoerXm4x7JzmJJ8KtXrGMwDwPb6yTtYpDjuQGyhry?cluster=devnet
+
 ## SDK client script
 
 ```bash

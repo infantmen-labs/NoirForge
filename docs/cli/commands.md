@@ -8,6 +8,7 @@ For detailed behavior and examples, use the per-command pages under `CLI → Com
 
 - `init <template> [dest]` → [`commands/init`](commands/init)
 - `codegen --artifact-name <name>` → [`commands/codegen`](commands/codegen)
+- `flow [--template <name>] [--dest <path>] [--cluster <...>]` → [`commands/flow`](commands/flow)
 - `test --circuit-dir <path>` → [`commands/test`](commands/test)
 - `compile --circuit-dir <path> --artifact-name <name>` → [`commands/compile`](commands/compile)
 - `setup --circuit-dir <path> --artifact-name <name>` → [`commands/setup`](commands/setup)
@@ -24,6 +25,8 @@ For detailed behavior and examples, use the per-command pages under `CLI → Com
 
 ## Observability
 
+- `compute-analyze --artifact-name <name>` → [`commands/compute-analyze`](commands/compute-analyze)
+- `sizes --artifact-name <name>` → [`commands/sizes`](commands/sizes)
 - `tx-stats --artifact-name <name> [--signature <sig>]` → [`commands/tx-stats`](commands/tx-stats)
 - `index-tx --artifact-name <name> --signature <sig> [--index-path <path>]` → [`commands/index-tx`](commands/index-tx)
 - `index-program --program-id <pubkey> [--limit <n>]` → [`commands/index-program`](commands/index-program)

@@ -184,6 +184,116 @@ async function cmdBench(opts) {
   }
 }
 
+async function cmdFlow(opts) {
+  const repoRoot = await findRepoRoot(process.cwd());
+  if (!repoRoot) {
+    fail('Could not locate repo root (expected a tool-versions file). Run this from within the noirforge repo.');
+  }
+
+  function runSelf(args) {
+    const start = process.hrtime.bigint();
+    const res = spawnSync(process.execPath, [__filename, ...args], {
+      stdio: 'inherit',
+      env: process.env,
+      cwd: repoRoot,
+    });
+    const end = process.hrtime.bigint();
+    if (res.error) {
+      fail(`Failed to run noirforge subcommand: ${res.error.message}`);
+    }
+    if (typeof res.status === 'number' && res.status !== 0) {
+      process.exit(res.status);
+    }
+    return Number(end - start) / 1e6;
+  }
+
+  const template = opts.template ? String(opts.template) : null;
+  const destDir = template ? path.resolve(opts.dest ? String(opts.dest) : path.join(process.cwd(), template)) : null;
+  const circuitDir = path.resolve(opts['circuit-dir'] || destDir || process.cwd());
+  const artifactName = opts['artifact-name'] || path.basename(circuitDir);
+
+  const common = ['--circuit-dir', circuitDir, '--artifact-name', artifactName];
+  if (opts['out-dir']) common.push('--out-dir', opts['out-dir']);
+  if (isTruthy(opts['relative-paths-only'])) common.push('--relative-paths-only');
+
+  const cluster = opts['cluster'] || null;
+  const allowMainnetArgs = isTruthy(opts['allow-mainnet']) ? ['--allow-mainnet'] : [];
+  const cuLimitArgs = opts['cu-limit'] ? ['--cu-limit', String(opts['cu-limit'])] : [];
+  const payerArgs = opts['payer'] ? ['--payer', opts['payer']] : [];
+  const rpcArgs = [];
+  if (opts['rpc-url']) rpcArgs.push('--rpc-url', opts['rpc-url']);
+  if (opts['rpc-endpoints']) rpcArgs.push('--rpc-endpoints', opts['rpc-endpoints']);
+  if (opts['rpc-provider']) rpcArgs.push('--rpc-provider', opts['rpc-provider']);
+  if (opts['ws-url']) rpcArgs.push('--ws-url', opts['ws-url']);
+  if (opts['ws-endpoints']) rpcArgs.push('--ws-endpoints', opts['ws-endpoints']);
+
+  let initMs = null;
+  if (template) {
+    initMs = runSelf(['init', template, destDir]);
+  }
+
+  const testMs = runSelf(['test', '--circuit-dir', circuitDir]);
+  const buildMs = runSelf(['build', ...common]);
+  const proveMs = runSelf(['prove', ...common]);
+  const verifyLocalMs = runSelf(['verify-local', '--artifact-name', artifactName, ...(opts['out-dir'] ? ['--out-dir', opts['out-dir']] : [])]);
+
+  let deployMs = null;
+  let verifyOnchainMs = null;
+  let txStatsMs = null;
+  if (cluster) {
+    deployMs = runSelf([
+      'deploy',
+      '--artifact-name',
+      artifactName,
+      ...(opts['out-dir'] ? ['--out-dir', opts['out-dir']] : []),
+      ...(isTruthy(opts['relative-paths-only']) ? ['--relative-paths-only'] : []),
+      '--cluster',
+      cluster,
+      ...allowMainnetArgs,
+    ]);
+    verifyOnchainMs = runSelf([
+      'verify-onchain',
+      '--artifact-name',
+      artifactName,
+      ...(opts['out-dir'] ? ['--out-dir', opts['out-dir']] : []),
+      '--cluster',
+      cluster,
+      ...allowMainnetArgs,
+      ...cuLimitArgs,
+      ...payerArgs,
+      ...rpcArgs,
+    ]);
+    txStatsMs = runSelf([
+      'tx-stats',
+      '--artifact-name',
+      artifactName,
+      ...(opts['out-dir'] ? ['--out-dir', opts['out-dir']] : []),
+      '--cluster',
+      cluster,
+      ...rpcArgs,
+    ]);
+  }
+
+  process.stdout.write('OK\n');
+  if (template) {
+    process.stdout.write(`template=${template}\n`);
+    process.stdout.write(`dest=${destDir}\n`);
+    process.stdout.write(`init_ms=${initMs.toFixed(2)}\n`);
+  }
+  process.stdout.write(`circuit_dir=${circuitDir}\n`);
+  process.stdout.write(`artifact_name=${artifactName}\n`);
+  process.stdout.write(`test_ms=${testMs.toFixed(2)}\n`);
+  process.stdout.write(`build_ms=${buildMs.toFixed(2)}\n`);
+  process.stdout.write(`prove_ms=${proveMs.toFixed(2)}\n`);
+  process.stdout.write(`verify_local_ms=${verifyLocalMs.toFixed(2)}\n`);
+  if (cluster) {
+    process.stdout.write(`cluster=${cluster}\n`);
+    process.stdout.write(`deploy_ms=${deployMs.toFixed(2)}\n`);
+    process.stdout.write(`verify_onchain_ms=${verifyOnchainMs.toFixed(2)}\n`);
+    process.stdout.write(`tx_stats_ms=${txStatsMs.toFixed(2)}\n`);
+  }
+}
+
 async function sha256File(filePath) {
   return await new Promise((resolve, reject) => {
     const hash = crypto.createHash('sha256');
@@ -818,6 +928,7 @@ function usage() {
     '  noirforge init <template> [dest]',
     '  noirforge codegen --artifact-name <name> [--out <dir>] [--out-dir <path>] [--anchor-idl]',
     '  noirforge bench [--circuit-dir <path>] [--artifact-name <name>] [--out-dir <path>] [--cluster <devnet|mainnet-beta|testnet|localhost|url>] [--allow-mainnet] [--cu-limit <n>] [--payer <keypair.json>] [--rpc-provider <default|quicknode|helius>] [--rpc-url <url>] [--rpc-endpoints <csv>] [--ws-url <url>] [--ws-endpoints <csv>]',
+    '  noirforge flow [--template <name>] [--dest <path>] [--circuit-dir <path>] [--artifact-name <name>] [--out-dir <path>] [--relative-paths-only] [--cluster <devnet|mainnet-beta|testnet|localhost|url>] [--allow-mainnet] [--cu-limit <n>] [--payer <keypair.json>] [--rpc-provider <default|quicknode|helius>] [--rpc-url <url>] [--rpc-endpoints <csv>] [--ws-url <url>] [--ws-endpoints <csv>]',
     '  noirforge build [--circuit-dir <path>] [--artifact-name <name>] [--out-dir <path>] [--relative-paths-only]',
     '  noirforge compile [--circuit-dir <path>] [--artifact-name <name>] [--out-dir <path>] [--relative-paths-only]',
     '  noirforge setup [--circuit-dir <path>] [--artifact-name <name>] [--out-dir <path>] [--relative-paths-only]',
@@ -828,6 +939,8 @@ function usage() {
     '  noirforge deploy --artifact-name <name> [--out-dir <path>] [--relative-paths-only] [--cluster <devnet|mainnet-beta|testnet|localhost|url>] [--allow-mainnet] [--upgrade-authority <keypair.json>] [--final]',
     '  noirforge verify-onchain --artifact-name <name> [--out-dir <path>] [--cluster <devnet|mainnet-beta|testnet|localhost|url>] [--allow-mainnet] [--cu-limit <n>] [--payer <keypair.json>] [--rpc-provider <default|quicknode|helius>] [--rpc-url <url>] [--rpc-endpoints <csv>] [--ws-url <url>] [--ws-endpoints <csv>]',
     '  noirforge simulate-onchain --artifact-name <name> [--out-dir <path>] [--cluster <devnet|mainnet-beta|testnet|localhost|url>] [--allow-mainnet] [--cu-limit <n>] [--payer <keypair.json>] [--rpc-provider <default|quicknode|helius>] [--rpc-url <url>] [--rpc-endpoints <csv>] [--ws-url <url>] [--ws-endpoints <csv>]',
+    '  noirforge compute-analyze --artifact-name <name> [--out-dir <path>] [--history-path <path>] [--print-logs <0|1>] [--cluster <devnet|mainnet-beta|testnet|localhost|url>] [--allow-mainnet] [--cu-limit <n>] [--payer <keypair.json>] [--rpc-provider <default|quicknode|helius>] [--rpc-url <url>] [--rpc-endpoints <csv>] [--ws-url <url>] [--ws-endpoints <csv>]',
+    '  noirforge sizes --artifact-name <name> [--out-dir <path>]',
     '  noirforge tx-stats [--artifact-name <name>] [--out-dir <path>] [--signature <sig>] [--cluster <devnet|mainnet-beta|testnet|localhost|url>] [--rpc-provider <default|quicknode|helius>] [--rpc-url <url>] [--rpc-endpoints <csv>] [--ws-url <url>] [--ws-endpoints <csv>]',
     '  noirforge index-tx [--artifact-name <name>] [--out-dir <path>] [--signature <sig>] [--cluster <devnet|mainnet-beta|testnet|localhost|url>] [--index-path <path>] [--helius-enhanced <0|1>] [--helius-api-key <key>] [--rpc-provider <default|quicknode|helius>] [--rpc-url <url>] [--rpc-endpoints <csv>] [--ws-url <url>] [--ws-endpoints <csv>]',
     '  noirforge index-program [--program-id <pubkey>] [--artifact-name <name>] [--out-dir <path>] [--cluster <devnet|mainnet-beta|testnet|localhost|url>] [--index-path <path>] [--limit <n>] [--before <sig>] [--until <sig>] [--rpc-provider <default|quicknode|helius>] [--rpc-url <url>] [--rpc-endpoints <csv>] [--ws-url <url>] [--ws-endpoints <csv>]',
@@ -929,6 +1042,94 @@ function run(cmd, args, options) {
   }
 }
 
+function takeLastLines(txt, maxLines) {
+  const lines = String(txt || '').split(/\r?\n/);
+  if (!Number.isFinite(maxLines) || maxLines <= 0) return lines;
+  if (lines.length <= maxLines) return lines;
+  return lines.slice(lines.length - maxLines);
+}
+
+function summarizeNargoFailure(output) {
+  const lines = String(output || '').split(/\r?\n/);
+  const picked = [];
+  const seen = new Set();
+
+  function add(line) {
+    const t = String(line || '').trim();
+    if (!t) return;
+    if (seen.has(t)) return;
+    seen.add(t);
+    picked.push(t);
+  }
+
+  for (const l of lines) {
+    const t = String(l || '').trim();
+    if (!t) continue;
+    const low = t.toLowerCase();
+    if (
+      low.startsWith('error') ||
+      low.includes('error:') ||
+      low.includes('assert') ||
+      low.includes('failed') ||
+      low.includes('panic') ||
+      low.includes('constraint')
+    ) {
+      add(t);
+    }
+    if (picked.length >= 12) break;
+  }
+
+  if (picked.length === 0) {
+    for (const l of takeLastLines(lines.join('\n'), 12)) add(l);
+  }
+
+  return picked;
+}
+
+function extractFirstNoirLocation(output) {
+  const txt = String(output || '');
+  const lines = txt.split(/\r?\n/);
+
+  const patterns = [
+    /(?:^|\s|-->|\(|\[)([^\s\)\]]+\.nr):(\d+):(\d+)/,
+    /(?:^|\s|-->|\(|\[)([^\s\)\]]+\.nr):(\d+)/,
+  ];
+
+  for (const line of lines) {
+    const s = String(line || '');
+    for (const re of patterns) {
+      const m = s.match(re);
+      if (!m) continue;
+      const file = m[1];
+      const lineNo = Number(m[2]);
+      const colNo = m[3] != null ? Number(m[3]) : null;
+      if (!file || !Number.isFinite(lineNo) || lineNo <= 0) continue;
+      return { file, line: lineNo, col: Number.isFinite(colNo) && colNo > 0 ? colNo : null };
+    }
+  }
+  return null;
+}
+
+function formatSourceSnippet(absPath, lineNo, contextLines) {
+  const ctx = Number.isFinite(contextLines) ? Math.max(0, Math.floor(contextLines)) : 2;
+  try {
+    const txt = fs.readFileSync(absPath, 'utf8');
+    const lines = txt.split(/\r?\n/);
+    const idx = Math.max(0, Math.floor(lineNo) - 1);
+    const start = Math.max(0, idx - ctx);
+    const end = Math.min(lines.length - 1, idx + ctx);
+    const out = [];
+    for (let i = start; i <= end; i++) {
+      const n = String(i + 1).padStart(4, ' ');
+      const mark = i === idx ? '>' : ' ';
+      out.push(`${mark}${n} | ${lines[i]}`);
+    }
+    return out.join('\n');
+  } catch {
+    return null;
+  }
+}
+
 function runCaptureForErrors(cmd, args, options) {
   const spanId = obsNextId('exec');
   const startMs = Date.now();
@@ -968,6 +1169,19 @@ function runCaptureForErrors(cmd, args, options) {
     const stderr = (res.stderr || '').trim();
     const code = res.status;
     const out = [stderr, stdout].filter(Boolean).join('\n');
+    if (cmd === 'nargo') {
+      const summary = summarizeNargoFailure(out);
+      const summaryBlock = summary.length ? `\nNoirForge summary:\n${summary.map((l) => `- ${l}`).join('\n')}` : '';
+      const loc = extractFirstNoirLocation(out);
+      const baseDir = options && options.cwd ? options.cwd : process.cwd();
+      const absPath = loc && loc.file ? path.resolve(baseDir, loc.file) : null;
+      const snippet = absPath && loc && loc.line ? formatSourceSnippet(absPath, loc.line, 2) : null;
+      const locBlock =
+        loc && absPath
+          ? `\nNoirForge location:\nfile=${absPath}\nline=${loc.line}${loc.col ? `\ncol=${loc.col}` : ''}${snippet ? `\n\nNoirForge context:\n${snippet}` : ''}`
+          : '';
+      fail(`Command failed: ${cmd} ${args.join(' ')} (exit ${code})${summaryBlock}${locBlock}${out ? `\n\nRaw output:\n${out}` : ''}`);
+    }
     fail(`Command failed: ${cmd} ${args.join(' ')} (exit ${code})${out ? `\n${out}` : ''}`);
   }
   if (res.stdout) process.stdout.write(res.stdout);
@@ -1180,6 +1394,150 @@ async function cmdCompile(opts) {
   process.stdout.write(`artifact_dir=${outDir}\n`);
   process.stdout.write(`acir_json=${acirOut}\n`);
   process.stdout.write(`ccs=${ccsOut}\n`);
+  process.stdout.write(`manifest=${manifestPath}\n`);
+}
+
+async function cmdComputeAnalyze(opts) {
+  const artifactName = opts['artifact-name'];
+  if (!artifactName) {
+    fail('Missing required flag: --artifact-name');
+  }
+
+  const repoRoot = await findRepoRoot(process.cwd());
+  if (!repoRoot) {
+    fail('Could not locate repo root (expected a tool-versions file). Run this from within the noirforge repo.');
+  }
+
+  const outDir = path.resolve(opts['out-dir'] || path.join(repoRoot, 'artifacts', artifactName, 'local'));
+
+  const manifestPath = path.join(outDir, 'noirforge.json');
+  const manifest = await readJsonIfExists(manifestPath);
+  if (!manifest || !manifest.outputs) {
+    fail(`Manifest not found or invalid: ${manifestPath}`);
+  }
+
+  const resolvedOutputs = coreResolveOutputs(manifest, outDir);
+
+  const proofPath = resolveStoredPath(outDir, resolvedOutputs.proof);
+  const pwPath = resolveStoredPath(outDir, resolvedOutputs.public_witness);
+  if (!proofPath || !(await fileExists(proofPath))) {
+    fail(`Missing proof output in manifest or file not found: ${proofPath}`);
+  }
+  if (!pwPath || !(await fileExists(pwPath))) {
+    fail(`Missing public witness output in manifest or file not found: ${pwPath}`);
+  }
+
+  const cluster = opts['cluster'] || manifest.outputs.deployed_cluster || 'devnet';
+  if (String(cluster) === 'mainnet-beta' && !isTruthy(opts['allow-mainnet'])) {
+    fail('Refusing to use mainnet-beta without explicit opt-in. Re-run with --allow-mainnet.');
+  }
+  const deployedProgramId = manifest.outputs.deployed_program_id;
+  if (!deployedProgramId) {
+    fail(
+      `Missing deployed_program_id in manifest (${manifestPath}). Run: noirforge deploy --artifact-name ${artifactName} --cluster devnet`
+    );
+  }
+
+  let web3;
+  try {
+    web3 = require('@solana/web3.js');
+  } catch {
+    fail('Missing dependency: @solana/web3.js. Run: pnpm -C packages/cli add @solana/web3.js');
+  }
+
+  const endpoints = getRpcEndpoints(web3, cluster, opts);
+  const wsEndpoints = getWsEndpoints(opts, cluster);
+
+  const payerPath = path.resolve(opts['payer'] || process.env.SOLANA_KEYPAIR || path.join(os.homedir(), '.config', 'solana', 'id.json'));
+  if (!(await fileExists(payerPath))) {
+    fail(`Payer keypair not found: ${payerPath}`);
+  }
+
+  const payerSecret = JSON.parse(await fsp.readFile(payerPath, 'utf8'));
+  const payer = web3.Keypair.fromSecretKey(Uint8Array.from(payerSecret));
+
+  const proofBytes = await fsp.readFile(proofPath);
+  const pwBytes = await fsp.readFile(pwPath);
+  const data = coreBuildInstructionData(proofBytes, pwBytes);
+
+  const cuLimitRaw = opts['cu-limit'];
+  const cuLimit = cuLimitRaw == null ? 500_000 : Number(cuLimitRaw);
+  if (!Number.isFinite(cuLimit) || cuLimit <= 0) {
+    fail('Invalid --cu-limit (expected a positive number)');
+  }
+
+  const computeIx = web3.ComputeBudgetProgram.setComputeUnitLimit({ units: Math.floor(cuLimit) });
+  const verifyIx = new web3.TransactionInstruction({
+    programId: new web3.PublicKey(deployedProgramId),
+    keys: [],
+    data,
+  });
+
+  const tx = new web3.Transaction().add(computeIx, verifyIx);
+  tx.feePayer = payer.publicKey;
+
+  const { sim, rpcEndpoint } = await withRpcConnection(
+    web3,
+    endpoints,
+    async (connection, endpoint) => {
+      const latest = await connection.getLatestBlockhash('confirmed');
+      tx.recentBlockhash = latest.blockhash;
+      tx.sign(payer);
+
+      let sim;
+      try {
+        sim = await connection.simulateTransaction(tx, { sigVerify: false, commitment: 'confirmed' });
+      } catch {
+        sim = await connection.simulateTransaction(tx, [payer], 'confirmed');
+      }
+      return { sim, rpcEndpoint: endpoint };
+    },
+    { wsEndpoints: wsEndpoints || undefined, obsOp: 'simulateTransaction' }
+  );
+
+  const value = sim && sim.value ? sim.value : null;
+  const logs = value && value.logs ? value.logs : null;
+  const err = value ? value.err : null;
+  const unitsConsumed = value && typeof value.unitsConsumed === 'number' ? value.unitsConsumed : null;
+
+  const printLogs = isTruthy(opts['print-logs']);
+  if (printLogs && Array.isArray(logs)) {
+    for (const l of logs) process.stdout.write(`${l}\n`);
+  }
+
+  const historyPath = path.resolve(opts['history-path'] || path.join(outDir, 'noirforge-compute.jsonl'));
+  await fsp.mkdir(path.dirname(historyPath), { recursive: true });
+  const rec = {
+    kind: 'noirforge_simulate',
+    simulated_at: new Date().toISOString(),
+    artifact_name: artifactName,
+    cluster,
+    rpc_endpoint: rpcEndpoint || null,
+    program_id: deployedProgramId,
+    cu_limit: Math.floor(cuLimit),
+    compute_units_consumed: unitsConsumed,
+    ok: !err,
+    err,
+  };
+  await fsp.appendFile(historyPath, JSON.stringify(rec) + '\n', 'utf8');
+
+  if (err) {
+    process.stdout.write('ERR\n');
+    process.stdout.write(`cluster=${cluster}\n`);
+    process.stdout.write(`program_id=${deployedProgramId}\n`);
+    process.stdout.write(`cu_limit=${Math.floor(cuLimit)}\n`);
+    if (unitsConsumed != null) process.stdout.write(`compute_units_consumed=${unitsConsumed}\n`);
+    process.stdout.write(`history_path=${historyPath}\n`);
+    process.stdout.write(`manifest=${manifestPath}\n`);
+    fail(`On-chain simulation error: ${JSON.stringify(err)}`);
+  }
+
+  process.stdout.write('OK\n');
+  process.stdout.write(`cluster=${cluster}\n`);
+  process.stdout.write(`program_id=${deployedProgramId}\n`);
+  process.stdout.write(`cu_limit=${Math.floor(cuLimit)}\n`);
+  if (unitsConsumed != null) process.stdout.write(`compute_units_consumed=${unitsConsumed}\n`);
+  process.stdout.write(`history_path=${historyPath}\n`);
   process.stdout.write(`manifest=${manifestPath}\n`);
 }
 
@@ -1488,6 +1846,52 @@ async function cmdTxStats(opts) {
   if (typeof fee === 'number') process.stdout.write(`fee_lamports=${fee}\n`);
   if (typeof computeUnits === 'number') process.stdout.write(`compute_units=${computeUnits}\n`);
   if (err) process.stdout.write(`err=${JSON.stringify(err)}\n`);
+}
+
+async function cmdSizes(opts) {
+  const artifactName = opts['artifact-name'];
+  if (!artifactName) {
+    fail('Missing required flag: --artifact-name');
+  }
+
+  const repoRoot = await findRepoRoot(process.cwd());
+  if (!repoRoot) {
+    fail('Could not locate repo root (expected a tool-versions file). Run this from within the noirforge repo.');
+  }
+
+  const outDir = path.resolve(opts['out-dir'] || path.join(repoRoot, 'artifacts', artifactName, 'local'));
+  const manifestPath = path.join(outDir, 'noirforge.json');
+  const manifest = await readJsonIfExists(manifestPath);
+  if (!manifest || !manifest.outputs) {
+    fail(`Manifest not found or invalid: ${manifestPath}`);
+  }
+
+  const resolvedOutputs = coreResolveOutputs(manifest, outDir);
+  const proofPath = resolveStoredPath(outDir, resolvedOutputs.proof);
+  const pwPath = resolveStoredPath(outDir, resolvedOutputs.public_witness);
+
+  if (!proofPath || !(await fileExists(proofPath))) {
+    fail(`Missing proof output in manifest or file not found: ${proofPath}`);
+  }
+  if (!pwPath || !(await fileExists(pwPath))) {
+    fail(`Missing public witness output in manifest or file not found: ${pwPath}`);
+  }
+
+  const proofStat = await fsp.stat(proofPath);
+  const pwStat = await fsp.stat(pwPath);
+  const proofBytes = proofStat.size;
+  const publicWitnessBytes = pwStat.size;
+  const instructionDataBytes = proofBytes + publicWitnessBytes;
+
+  process.stdout.write('OK\n');
+  process.stdout.write(`artifact_name=${artifactName}\n`);
+  process.stdout.write(`artifact_dir=${outDir}\n`);
+  process.stdout.write(`proof=${proofPath}\n`);
+  process.stdout.write(`public_witness=${pwPath}\n`);
+  process.stdout.write(`proof_bytes=${proofBytes}\n`);
+  process.stdout.write(`public_witness_bytes=${publicWitnessBytes}\n`);
+  process.stdout.write(`instruction_data_bytes=${instructionDataBytes}\n`);
+  process.stdout.write(`manifest=${manifestPath}\n`);
 }
 
 async function cmdIndexTx(opts) {
@@ -2174,18 +2578,27 @@ async function cmdSimulateOnchain(opts) {
   const value = sim && sim.value ? sim.value : null;
   const logs = value && value.logs ? value.logs : null;
   const err = value ? value.err : null;
+  const unitsConsumed = value && typeof value.unitsConsumed === 'number' ? value.unitsConsumed : null;
 
   if (Array.isArray(logs)) {
     for (const l of logs) process.stdout.write(`${l}\n`);
   }
 
   if (err) {
+    process.stdout.write('ERR\n');
+    process.stdout.write(`cluster=${cluster}\n`);
+    process.stdout.write(`program_id=${deployedProgramId}\n`);
+    process.stdout.write(`cu_limit=${Math.floor(cuLimit)}\n`);
+    if (unitsConsumed != null) process.stdout.write(`compute_units_consumed=${unitsConsumed}\n`);
+    process.stdout.write(`manifest=${manifestPath}\n`);
     fail(`On-chain simulation error: ${JSON.stringify(err)}`);
   }
 
   process.stdout.write('OK\n');
   process.stdout.write(`cluster=${cluster}\n`);
   process.stdout.write(`program_id=${deployedProgramId}\n`);
+  process.stdout.write(`cu_limit=${Math.floor(cuLimit)}\n`);
+  if (unitsConsumed != null) process.stdout.write(`compute_units_consumed=${unitsConsumed}\n`);
   process.stdout.write(`manifest=${manifestPath}\n`);
 }
 
@@ -2742,6 +3155,12 @@ async function main() {
       return;
     }
 
+    if (cmd === 'flow') {
+      await cmdFlow(opts);
+      obsEnd(true);
+      return;
+    }
+
     if (cmd === 'rerun-prove') {
       await cmdRerunProve(opts);
       obsEnd(true);
@@ -2756,6 +3175,18 @@ async function main() {
 
     if (cmd === 'simulate-onchain') {
       await cmdSimulateOnchain(opts);
+      obsEnd(true);
+      return;
+    }
+
+    if (cmd === 'compute-analyze') {
+      await cmdComputeAnalyze(opts);
+      obsEnd(true);
+      return;
+    }
+
+    if (cmd === 'sizes') {
+      await cmdSizes(opts);
       obsEnd(true);
       return;
     }

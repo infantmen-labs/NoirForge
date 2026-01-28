@@ -10,11 +10,39 @@ NoirForge includes a Docusaurus v3 documentation UI under `packages/docs-site/`.
 pnpm docs:start
 ```
 
+The docs site includes two interactive pages:
+
+- `/demo`: browser-only manifest validation + instruction encoding
+- `/metrics`: browser-only visualization for artifact sizes and compute history
+
 - Build production static site:
 
 ```bash
 pnpm docs:build
 ```
+
+## Metrics page
+
+The `/metrics` page is designed to work with local artifact outputs (nothing is uploaded).
+
+To generate inputs:
+
+- Proof/pw sizes:
+
+```bash
+pnpm noirforge sizes --artifact-name <artifact_name>
+```
+
+- Compute history JSONL:
+
+```bash
+pnpm noirforge compute-analyze --artifact-name <artifact_name> --cluster devnet --payer ~/.config/solana/id.json
+```
+
+Then open `/metrics` and upload:
+
+- `<name>.proof` and `<name>.pw` (for sizes)
+- `noirforge-compute.jsonl` (for compute history)
 
 - Serve the production build locally:
 

@@ -29,8 +29,11 @@ noirforge simulate-onchain \
 ## Behavior
 
 - Prints simulation logs to stdout.
+- Prints a short key/value summary including `cluster`, `program_id`, and `compute_units_consumed` when available.
 - Exits non-zero if the simulation returns an error.
 - Does not update the manifest.
+
+If you want to persist per-run compute results for later analysis, use `noirforge compute-analyze` (appends a JSONL history file).
 
 ## See also
 

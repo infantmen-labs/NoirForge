@@ -25,6 +25,7 @@ const sidebars = {
           items: [
             'cli/command-init',
             'cli/command-codegen',
+            'cli/command-flow',
             'cli/command-test',
             'cli/command-compile',
             'cli/command-setup',
@@ -35,6 +36,8 @@ const sidebars = {
             'cli/command-deploy',
             'cli/command-verify-onchain',
             'cli/command-simulate-onchain',
+            'cli/command-compute-analyze',
+            'cli/command-sizes',
             'cli/command-bench',
             'cli/command-tx-stats',
             'cli/command-index-tx',

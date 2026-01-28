@@ -26,8 +26,10 @@ Open:
 You need three files from a local proof run:
 
 - `artifacts/<artifact_name>/local/noirforge.json`
-- `artifacts/<artifact_name>/local/<artifact_name>.proof`
-- `artifacts/<artifact_name>/local/<artifact_name>.pw`
+- `artifacts/<artifact_name>/local/<name>.proof`
+- `artifacts/<artifact_name>/local/<name>.pw`
+
+Tip: The canonical proof and witness file names are recorded in `noirforge.json` under `outputs_rel.proof` and `outputs_rel.public_witness`.
 
 A concrete example using the `sum_a_b` template:
 

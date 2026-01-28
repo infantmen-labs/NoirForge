@@ -11,7 +11,8 @@ Today, artifacts are written to:
 Common networks:
 
 - `local`
-- `devnet`
+
+Note: Today the NoirForge CLI writes artifacts under `artifacts/<artifact_name>/local/` even if you deploy/verify on devnet; on-chain metadata is recorded in the manifest.
 
 ## Manifest file
 

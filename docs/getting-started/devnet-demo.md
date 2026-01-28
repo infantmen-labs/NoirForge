@@ -26,4 +26,13 @@ Explorer links (devnet):
 - Deploy tx: https://explorer.solana.com/tx/2EbsJWpENXsjaymH64fXMoJUxM3NUcEqitNdkeVtkVXNwBZVe7xtMdNEj5s7LSznZ1Dnv7ebHZq4RQ4GY1TiAgXF?cluster=devnet
 - Verify tx: https://explorer.solana.com/tx/3k73UUa14HFTuMihzh2HenmVvscUJAoLTJvm2TFjJVjs5tRKhP71hg74VDHhNbBRKDX9fSEUfYkbN762KGEFMn4g?cluster=devnet
 
+## Verified devnet proof + SPL transfer (private_transfer_authorization)
+
+- `deployed_program_id`: `2DbKgTxPqF2pk835bqetK7RqcAudUhbTcPE7wVWuMprr`
+- verify + transfer tx (devnet): https://explorer.solana.com/tx/2bhiT1WVM66PYixGbhAaeoV5qKaVeswQQbuWDm12sJXnr7FuoerXm4x7JzmJJ8KtXrGMwDwPb6yTtYpDjuQGyhry?cluster=devnet
+
+Explorer links (devnet):
+
+- Program: https://explorer.solana.com/address/2DbKgTxPqF2pk835bqetK7RqcAudUhbTcPE7wVWuMprr?cluster=devnet
+
 Mainnet deployment is intentionally deferred due to rent/fee costs.
