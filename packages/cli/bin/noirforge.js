@@ -3247,6 +3247,8 @@ module.exports = {
   buildNoirforgeVerifyIndexRecord,
   buildIndexReport,
   clusterToRpcUrl,
+  extractFirstNoirLocation,
+  formatSourceSnippet,
   extractInstructionDataForProgram,
   fetchHeliusEnhancedTransactions,
   heliusEnhancedBaseUrlFromCluster,

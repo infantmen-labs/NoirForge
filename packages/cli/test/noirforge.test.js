@@ -13,6 +13,8 @@ const {
   buildNoirforgeVerifyIndexRecord,
   buildIndexReport,
   extractInstructionDataForProgram,
+  extractFirstNoirLocation,
+  formatSourceSnippet,
   fetchHeliusEnhancedTransactions,
   heliusEnhancedBaseUrlFromCluster,
   parseArgs,
@@ -43,6 +45,31 @@ test('getWsEndpoints: explicit --ws-url overrides provider selection', () => {
       else process.env[k] = prev[k];
     }
   }
+});
+
+test('extractFirstNoirLocation finds the first .nr:line[:col] in output', () => {
+  const out = [
+    'warning: something',
+    '--> src/main.nr:42:7',
+    'error: assertion failed',
+    '  at src/other.nr:9',
+  ].join('\n');
+
+  const loc = extractFirstNoirLocation(out);
+  assert.deepEqual(loc, { file: 'src/main.nr', line: 42, col: 7 });
+});
+
+test('formatSourceSnippet prints a small numbered context window', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'noirforge-cli-test-snippet-'));
+  const p = path.join(root, 'main.nr');
+  const txt = ['line1', 'line2', 'line3', 'line4', 'line5'].join('\n');
+  await fs.writeFile(p, txt, 'utf8');
+
+  const snippet = formatSourceSnippet(p, 3, 1);
+  assert.equal(typeof snippet, 'string');
+  assert.ok(snippet.includes('  2 | line2'));
+  assert.ok(snippet.includes('>   3 | line3'));
+  assert.ok(snippet.includes('  4 | line4'));
 });
 
 test('getWsEndpoints: auto-selects quicknode when quicknode ws env endpoints are present', () => {
