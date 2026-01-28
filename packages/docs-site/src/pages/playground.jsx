@@ -151,6 +151,45 @@ export default function Playground() {
             </div>
           </header>
 
+          <section className={styles.card} style={{ marginBottom: '1rem' }}>
+            <div className={styles.cardTitle}>
+              <h2>Guided flow</h2>
+            </div>
+
+            <div className={styles.small}>
+              A simple path from template → artifacts → verify:
+            </div>
+
+            <div className={styles.kv}>
+              <div className={styles.k}>1) Pick a template</div>
+              <div className={`${styles.v} ${styles.mono}`}>pnpm noirforge init &lt;template&gt; &lt;dest_dir&gt;</div>
+              <div className={styles.k}>2) Run pipeline</div>
+              <div className={`${styles.v} ${styles.mono}`}>pnpm noirforge flow --circuit-dir &lt;dest_dir&gt; --artifact-name &lt;artifact_name&gt;</div>
+              <div className={styles.k}>3) Find outputs</div>
+              <div className={`${styles.v} ${styles.mono}`}>artifacts/&lt;artifact_name&gt;/local/*.proof + *.pw</div>
+              <div className={styles.k}>4) Inspect here</div>
+              <div className={`${styles.v} ${styles.mono}`}>upload .pw/.proof below</div>
+              <div className={styles.k}>5) Verify</div>
+              <div className={styles.v}>Use the live demo / demo dApp or deploy+verify on devnet.</div>
+            </div>
+
+            <div className={styles.row}>
+              <Link className="button button--secondary button--sm" to="/templates">
+                Templates
+              </Link>
+              <Link className="button button--secondary button--sm" to="/docs/getting-started/quickstart">
+                Quickstart
+              </Link>
+              <Link className="button button--secondary button--sm" to="/docs/getting-started/demo-dapp">
+                Demo dApp
+              </Link>
+              <Link className="button button--secondary button--sm" to="/metrics">
+                Metrics
+              </Link>
+            </div>
+
+          </section>
+
           <div className={styles.grid}>
             <section className={styles.card}>
               <div className={styles.cardTitle}>
