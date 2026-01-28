@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noirforge.not/template-registry.schema.json",
+  "title": "NoirForge Template Registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "generated_at", "tool_versions", "templates"],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "generated_at": {
+      "type": "string"
+    },
+    "tool_versions": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "templates": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/template" }
+    }
+  },
+  "$defs": {
+    "template": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "description", "tags", "paths"],
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "paths": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "template_dir",
+            "nargo_toml",
+            "prover_toml",
+            "circuit_main",
+            "readme",
+            "client_verify_from_manifest"
+          ],
+          "properties": {
+            "template_dir": { "type": "string" },
+            "nargo_toml": { "type": "string" },
+            "prover_toml": { "type": "string" },
+            "circuit_main": { "type": "string" },
+            "readme": { "type": "string" },
+            "client_verify_from_manifest": { "type": "string" }
+          }
+        },
+        "notes": { "type": "string" }
+      }
+    }
+  }
+}

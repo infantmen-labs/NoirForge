@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-01-28T00:00:00.000Z",
+  "tool_versions": {
+    "nargo": "1.0.0-beta.13",
+    "sunspot": "8e61988da7b35add0e1384962f46c46b367235c1",
+    "solana": "2.3.13",
+    "anchor": "0.31.1",
+    "rustc": "1.90.0",
+    "cargo": "1.90.0",
+    "rustup": "1.28.2",
+    "node": "20.18.1",
+    "npm": "10.8.2",
+    "pnpm": "10.18.3",
+    "go": "1.24.12",
+    "docker": "28.5.1"
+  },
+  "templates": [
+    {
+      "name": "sum_a_b",
+      "description": "Minimal hello-world circuit proving knowledge of private a and b and exposing a+b as public output.",
+      "tags": ["hello_world", "pipeline", "arithmetic"],
+      "paths": {
+        "template_dir": "templates/sum_a_b",
+        "nargo_toml": "templates/sum_a_b/Nargo.toml",
+        "prover_toml": "templates/sum_a_b/Prover.toml",
+        "circuit_main": "templates/sum_a_b/src/main.nr",
+        "readme": "templates/sum_a_b/README.md",
+        "client_verify_from_manifest": "templates/sum_a_b/client/verify-from-manifest.js"
+      }
+    },
+    {
+      "name": "zk_gated_access_control",
+      "description": "Proof-gated access control toy circuit: keep secret private, publish token, enforce secret^2 == token.",
+      "tags": ["access_control", "authorization", "gate"],
+      "paths": {
+        "template_dir": "templates/zk_gated_access_control",
+        "nargo_toml": "templates/zk_gated_access_control/Nargo.toml",
+        "prover_toml": "templates/zk_gated_access_control/Prover.toml",
+        "circuit_main": "templates/zk_gated_access_control/src/main.nr",
+        "readme": "templates/zk_gated_access_control/README.md",
+        "client_verify_from_manifest": "templates/zk_gated_access_control/client/verify-from-manifest.js"
+      }
+    },
+    {
+      "name": "anonymous_voting",
+      "description": "Anonymous ballot toy circuit: private boolean vote, public encrypted_vote, enforce encrypted_vote = vote + nonce.",
+      "tags": ["voting", "privacy", "toy"],
+      "paths": {
+        "template_dir": "templates/anonymous_voting",
+        "nargo_toml": "templates/anonymous_voting/Nargo.toml",
+        "prover_toml": "templates/anonymous_voting/Prover.toml",
+        "circuit_main": "templates/anonymous_voting/src/main.nr",
+        "readme": "templates/anonymous_voting/README.md",
+        "client_verify_from_manifest": "templates/anonymous_voting/client/verify-from-manifest.js"
+      }
+    },
+    {
+      "name": "selective_disclosure",
+      "description": "Selective disclosure toy circuit: public disclosed + private hidden == public commitment.",
+      "tags": ["selective_disclosure", "credentials", "toy"],
+      "paths": {
+        "template_dir": "templates/selective_disclosure",
+        "nargo_toml": "templates/selective_disclosure/Nargo.toml",
+        "prover_toml": "templates/selective_disclosure/Prover.toml",
+        "circuit_main": "templates/selective_disclosure/src/main.nr",
+        "readme": "templates/selective_disclosure/README.md",
+        "client_verify_from_manifest": "templates/selective_disclosure/client/verify-from-manifest.js"
+      }
+    },
+    {
+      "name": "private_transfer_authorization",
+      "description": "Proof-gated transfer authorization circuit intended to drive an SPL token transfer demo. Public inputs bind sender/recipient/mint/amount.",
+      "tags": ["solana", "spl_token", "authorization", "transfer"],
+      "paths": {
+        "template_dir": "templates/private_transfer_authorization",
+        "nargo_toml": "templates/private_transfer_authorization/Nargo.toml",
+        "prover_toml": "templates/private_transfer_authorization/Prover.toml",
+        "circuit_main": "templates/private_transfer_authorization/src/main.nr",
+        "readme": "templates/private_transfer_authorization/README.md",
+        "client_verify_from_manifest": "templates/private_transfer_authorization/client/verify-from-manifest.js"
+      },
+      "notes": "Public witness encodes sender/recipient/mint as two Field limbs (16 bytes each, big-endian)."
+    },
+    {
+      "name": "hidden_balances",
+      "description": "Hidden balances toy circuit using commitments: prove a balance update without revealing balances.",
+      "tags": ["commitments", "balances", "privacy"],
+      "paths": {
+        "template_dir": "templates/hidden_balances",
+        "nargo_toml": "templates/hidden_balances/Nargo.toml",
+        "prover_toml": "templates/hidden_balances/Prover.toml",
+        "circuit_main": "templates/hidden_balances/src/main.nr",
+        "readme": "templates/hidden_balances/README.md",
+        "client_verify_from_manifest": "templates/hidden_balances/client/verify-from-manifest.js"
+      }
+    },
+    {
+      "name": "private_kyc_proof",
+      "description": "Private KYC toy circuit: prove private age meets public minimum threshold without revealing the age.",
+      "tags": ["kyc", "threshold", "privacy"],
+      "paths": {
+        "template_dir": "templates/private_kyc_proof",
+        "nargo_toml": "templates/private_kyc_proof/Nargo.toml",
+        "prover_toml": "templates/private_kyc_proof/Prover.toml",
+        "circuit_main": "templates/private_kyc_proof/src/main.nr",
+        "readme": "templates/private_kyc_proof/README.md",
+        "client_verify_from_manifest": "templates/private_kyc_proof/client/verify-from-manifest.js"
+      }
+    },
+    {
+      "name": "confidential_payments",
+      "description": "Confidential payments toy circuit using commitments: prove sender has enough balance and update public balance commitment without revealing balances or amounts.",
+      "tags": ["payments", "commitments", "privacy"],
+      "paths": {
+        "template_dir": "templates/confidential_payments",
+        "nargo_toml": "templates/confidential_payments/Nargo.toml",
+        "prover_toml": "templates/confidential_payments/Prover.toml",
+        "circuit_main": "templates/confidential_payments/src/main.nr",
+        "readme": "templates/confidential_payments/README.md",
+        "client_verify_from_manifest": "templates/confidential_payments/client/verify-from-manifest.js"
+      }
+    }
+  ]
+}

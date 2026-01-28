@@ -52,3 +52,6 @@ jobs:
 
       - name: Repo tests
         run: pnpm test
+
+      - name: Docs site build
+        run: pnpm docs:build
