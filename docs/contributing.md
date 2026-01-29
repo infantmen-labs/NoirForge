@@ -20,9 +20,22 @@ pnpm test
 - `packages/cli` - NoirForge CLI
 - `packages/sdk-ts` - TypeScript SDK
 - `crates/sdk-rs` - Rust SDK
+- `packages/vscode-extension` - VS Code extension (developer tools)
 - `templates/` - Template circuits and examples
 - `examples/` - Standalone runnable examples
 - `docs/` - Documentation
+
+## VS Code extension (dev)
+
+The repo includes a minimal VS Code extension under `packages/vscode-extension/`.
+
+- Open that folder in VS Code
+- Run **Run Extension** (Extension Development Host)
+- If you need a launch config, add it locally under `packages/vscode-extension/.vscode/` (it is not committed)
+- Use the Command Palette:
+  - `NoirForge: Flow`
+  - `NoirForge: Sizes`
+  - `NoirForge: Compute Analyze`
 
 ## Pull requests
 

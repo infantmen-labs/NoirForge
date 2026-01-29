@@ -114,6 +114,7 @@ pnpm test
 - Template catalog: `docs/template-catalog.md`
 - Troubleshooting: `docs/troubleshooting.md`
 - Examples: `examples/`
+- VS Code extension (dev): `packages/vscode-extension/`
 
 Documentation UI (local):
 
