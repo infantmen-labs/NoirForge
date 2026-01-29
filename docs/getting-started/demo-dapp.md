@@ -6,14 +6,14 @@ If you want the full end-to-end flow (connect a wallet and submit a real devnet 
 
 Hosted demo dApp:
 
-- https://demo.noirforge.not
+- https://noir-forge-docs-site-uz52-3zq4qdzza-spektorfrost-3611s-projects.vercel.app/
 
 ## Hosting
 
 The hosted demo dApp is deployed as a separate Vercel project with:
 
 - Root Directory: `packages/demo-dapp`
-- Custom Domain: `demo.noirforge.not`
+- Hosted URL: `https://noir-forge-docs-site-uz52-3zq4qdzza-spektorfrost-3611s-projects.vercel.app/`
 
 ## Start the demo dApp
 

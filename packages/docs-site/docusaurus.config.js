@@ -40,7 +40,7 @@ const config = {
       items: [
         { to: '/docs/intro', label: 'Docs', position: 'left' },
         { to: '/demo', label: 'Demo', position: 'left' },
-        { href: 'https://demo.noirforge.not', label: 'dApp', position: 'left' },
+        { href: 'https://noir-forge-docs-site-uz52-3zq4qdzza-spektorfrost-3611s-projects.vercel.app/', label: 'dApp', position: 'left' },
         { to: '/metrics', label: 'Metrics', position: 'left' },
         { to: '/templates', label: 'Templates', position: 'left' },
         { to: '/playground', label: 'Playground', position: 'left' },
