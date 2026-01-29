@@ -6,7 +6,7 @@ Rust helpers for NoirForge proof instruction encoding and Solana verify instruct
 
 ```toml
 [dependencies]
-noirforge-sdk = "0.1.0-rc.2"
+noirforge-sdk = "0.1.0-rc.3"
 ```
 
 ## Example

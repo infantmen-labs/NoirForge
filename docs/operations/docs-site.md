@@ -10,10 +10,12 @@ NoirForge includes a Docusaurus v3 documentation UI under `packages/docs-site/`.
 pnpm docs:start
 ```
 
-The docs site includes two interactive pages:
+The docs site includes interactive pages:
 
 - `/demo`: browser-only manifest validation + instruction encoding
 - `/metrics`: browser-only visualization for artifact sizes and compute history
+- `/templates`: searchable template registry browser
+- `/playground`: local artifact inspection (public witness + instruction data)
 
 - Build production static site:
 

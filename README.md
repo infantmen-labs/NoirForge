@@ -124,6 +124,8 @@ pnpm docs:start
 
 - Live demo: http://localhost:3000/demo
 - Metrics: http://localhost:3000/metrics
+- Templates: http://localhost:3000/templates
+- Playground: http://localhost:3000/playground
 
 ## Releases
 

@@ -5,7 +5,7 @@ TypeScript SDK for working with NoirForge artifacts and submitting on-chain veri
 ## Install
 
 ```bash
-npm i @noirforge/sdk@0.1.0-rc.2 @solana/web3.js
+npm i @noirforge/sdk@next @solana/web3.js
 ```
 
 ## Key APIs
@@ -25,7 +25,7 @@ import { Connection, Keypair } from '@solana/web3.js';
 import { loadManifestV1, submitVerifyFromManifest } from '@noirforge/sdk';
 
 const artifactDir = './artifacts/sum_a_b/devnet';
-const manifest = await loadManifestV1(`${artifactDir}/manifest.json`);
+const manifest = await loadManifestV1(`${artifactDir}/noirforge.json`);
 
 const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
 const payer = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(process.env.PAYER_JSON!)));

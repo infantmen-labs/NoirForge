@@ -5,7 +5,7 @@ Small, dependency-light helpers shared by NoirForge packages.
 ## Install
 
 ```bash
-npm i @noirforge/core@0.1.0-rc.2
+npm i @noirforge/core@next
 ```
 
 ## What’s inside
