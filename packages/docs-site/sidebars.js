@@ -60,6 +60,7 @@ const sidebars = {
       items: [
         'operations/ci-and-releases',
         'operations/local-development',
+        'operations/vscode-extension',
         'operations/docker',
         'operations/docs-site',
         'operations/webhooks',
