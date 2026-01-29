@@ -14,7 +14,11 @@
   "main": "./extension.js",
   "activationEvents": [
     "onCommand:noirforge.initTemplate",
-    "onCommand:noirforge.flow"
+    "onCommand:noirforge.flow",
+    "onCommand:noirforge.sizes",
+    "onCommand:noirforge.computeAnalyze",
+    "onCommand:noirforge.openArtifactsDir",
+    "onCommand:noirforge.openOutDir"
   ],
   "contributes": {
     "commands": [
@@ -25,6 +29,22 @@
       {
         "command": "noirforge.flow",
         "title": "NoirForge: Flow"
+      },
+      {
+        "command": "noirforge.sizes",
+        "title": "NoirForge: Sizes"
+      },
+      {
+        "command": "noirforge.computeAnalyze",
+        "title": "NoirForge: Compute Analyze"
+      },
+      {
+        "command": "noirforge.openArtifactsDir",
+        "title": "NoirForge: Open Artifacts Dir"
+      },
+      {
+        "command": "noirforge.openOutDir",
+        "title": "NoirForge: Open Out Dir"
       }
     ]
   }

@@ -3,6 +3,12 @@ const path = require('node:path');
 
 const vscode = require('vscode');
 
+const STATE_KEYS = {
+  lastArtifactName: 'noirforge.lastArtifactName',
+  lastOutDir: 'noirforge.lastOutDir',
+  lastCircuitDir: 'noirforge.lastCircuitDir',
+};
+
 function getWorkspaceRoot() {
   const folders = vscode.workspace.workspaceFolders;
   if (!folders || folders.length === 0) return null;
@@ -62,6 +68,38 @@ async function runWithProgress({ title, fn }) {
   );
 }
 
+async function confirmOrPickFolder({ title, rootFsPath, lastFsPath }) {
+  if (lastFsPath) {
+    const choice = await vscode.window.showQuickPick([`Use last: ${lastFsPath}`, 'Pick a folder…'], {
+      title,
+      ignoreFocusOut: true,
+    });
+    if (!choice) return null;
+    if (choice.startsWith('Use last: ')) return lastFsPath;
+  }
+
+  return pickFolder({ title, defaultUri: vscode.Uri.file(rootFsPath) });
+}
+
+async function getOrAskArtifactName({ defaultValue }) {
+  const artifactName = await vscode.window.showInputBox({
+    title: 'Artifact name',
+    prompt: 'Name under artifacts/<artifact_name> (e.g. local_run)',
+    value: defaultValue || '',
+    ignoreFocusOut: true,
+    validateInput: (v) => (v && v.trim() ? null : 'artifact name is required'),
+  });
+  return artifactName ? artifactName.trim() : null;
+}
+
+async function openFolderInOs(fsPath) {
+  try {
+    await vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(fsPath));
+  } catch {
+    await vscode.env.openExternal(vscode.Uri.file(fsPath));
+  }
+}
+
 async function cmdInitTemplate({ outputChannel }) {
   const root = getWorkspaceRoot();
   if (!root) {
@@ -95,7 +133,7 @@ async function cmdInitTemplate({ outputChannel }) {
   vscode.window.showInformationMessage(`Initialized template at ${dest}`);
 }
 
-async function cmdFlow({ outputChannel }) {
+async function cmdFlow({ outputChannel, context }) {
   const root = getWorkspaceRoot();
   if (!root) {
     vscode.window.showErrorMessage('No workspace folder is open.');
@@ -108,13 +146,7 @@ async function cmdFlow({ outputChannel }) {
   });
   if (!circuitDir) return;
 
-  const artifactName = await vscode.window.showInputBox({
-    title: 'Artifact name',
-    prompt: 'Name under artifacts/<artifact_name> (e.g. local_run)',
-    value: path.basename(circuitDir),
-    ignoreFocusOut: true,
-    validateInput: (v) => (v && v.trim() ? null : 'artifact name is required'),
-  });
+  const artifactName = await getOrAskArtifactName({ defaultValue: path.basename(circuitDir) });
   if (!artifactName) return;
 
   const outDir = await pickFolder({
@@ -124,16 +156,132 @@ async function cmdFlow({ outputChannel }) {
   if (!outDir) return;
 
   await runWithProgress({
-    title: `NoirForge: flow (${artifactName.trim()})`,
+    title: `NoirForge: flow (${artifactName})`,
     fn: async () => {
       await spawnPnpm(
-        ['noirforge', 'flow', '--circuit-dir', circuitDir, '--artifact-name', artifactName.trim(), '--out-dir', outDir],
+        ['noirforge', 'flow', '--circuit-dir', circuitDir, '--artifact-name', artifactName, '--out-dir', outDir],
         { cwd: root, outputChannel },
       );
     },
   });
 
+  if (context && context.globalState) {
+    await context.globalState.update(STATE_KEYS.lastCircuitDir, circuitDir);
+    await context.globalState.update(STATE_KEYS.lastArtifactName, artifactName);
+    await context.globalState.update(STATE_KEYS.lastOutDir, outDir);
+  }
+
   vscode.window.showInformationMessage('NoirForge flow completed.');
+}
+
+async function cmdSizes({ outputChannel, context }) {
+  const root = getWorkspaceRoot();
+  if (!root) {
+    vscode.window.showErrorMessage('No workspace folder is open.');
+    return;
+  }
+
+  const lastArtifactName = context && context.globalState ? context.globalState.get(STATE_KEYS.lastArtifactName) : null;
+  const lastOutDir = context && context.globalState ? context.globalState.get(STATE_KEYS.lastOutDir) : null;
+
+  const artifactName = await getOrAskArtifactName({ defaultValue: lastArtifactName || '' });
+  if (!artifactName) return;
+
+  const outDir = await confirmOrPickFolder({
+    title: 'Select artifact output dir (contains noirforge.json + .proof/.pw)',
+    rootFsPath: root,
+    lastFsPath: typeof lastOutDir === 'string' ? lastOutDir : null,
+  });
+  if (!outDir) return;
+
+  await runWithProgress({
+    title: `NoirForge: sizes (${artifactName})`,
+    fn: async () => {
+      await spawnPnpm(['noirforge', 'sizes', '--artifact-name', artifactName, '--out-dir', outDir], { cwd: root, outputChannel });
+    },
+  });
+
+  if (context && context.globalState) {
+    await context.globalState.update(STATE_KEYS.lastArtifactName, artifactName);
+    await context.globalState.update(STATE_KEYS.lastOutDir, outDir);
+  }
+}
+
+async function cmdComputeAnalyze({ outputChannel, context }) {
+  const root = getWorkspaceRoot();
+  if (!root) {
+    vscode.window.showErrorMessage('No workspace folder is open.');
+    return;
+  }
+
+  const lastArtifactName = context && context.globalState ? context.globalState.get(STATE_KEYS.lastArtifactName) : null;
+  const lastOutDir = context && context.globalState ? context.globalState.get(STATE_KEYS.lastOutDir) : null;
+
+  const artifactName = await getOrAskArtifactName({ defaultValue: lastArtifactName || '' });
+  if (!artifactName) return;
+
+  const outDir = await confirmOrPickFolder({
+    title: 'Select artifact output dir (contains noirforge.json + .proof/.pw)',
+    rootFsPath: root,
+    lastFsPath: typeof lastOutDir === 'string' ? lastOutDir : null,
+  });
+  if (!outDir) return;
+
+  await runWithProgress({
+    title: `NoirForge: compute-analyze (${artifactName})`,
+    fn: async () => {
+      await spawnPnpm(
+        ['noirforge', 'compute-analyze', '--artifact-name', artifactName, '--out-dir', outDir, '--print-logs', '0'],
+        { cwd: root, outputChannel },
+      );
+    },
+  });
+
+  if (context && context.globalState) {
+    await context.globalState.update(STATE_KEYS.lastArtifactName, artifactName);
+    await context.globalState.update(STATE_KEYS.lastOutDir, outDir);
+  }
+}
+
+async function cmdOpenArtifactsDir({ context }) {
+  const root = getWorkspaceRoot();
+  if (!root) {
+    vscode.window.showErrorMessage('No workspace folder is open.');
+    return;
+  }
+
+  const lastArtifactName = context && context.globalState ? context.globalState.get(STATE_KEYS.lastArtifactName) : null;
+  const artifactName = await getOrAskArtifactName({ defaultValue: lastArtifactName || '' });
+  if (!artifactName) return;
+
+  if (context && context.globalState) {
+    await context.globalState.update(STATE_KEYS.lastArtifactName, artifactName);
+  }
+
+  const dir = path.join(root, 'artifacts', artifactName, 'local');
+  await openFolderInOs(dir);
+}
+
+async function cmdOpenOutDir({ context }) {
+  const root = getWorkspaceRoot();
+  if (!root) {
+    vscode.window.showErrorMessage('No workspace folder is open.');
+    return;
+  }
+
+  const lastOutDir = context && context.globalState ? context.globalState.get(STATE_KEYS.lastOutDir) : null;
+  const outDir = await confirmOrPickFolder({
+    title: 'Select output directory (out-dir)',
+    rootFsPath: root,
+    lastFsPath: typeof lastOutDir === 'string' ? lastOutDir : null,
+  });
+  if (!outDir) return;
+
+  if (context && context.globalState) {
+    await context.globalState.update(STATE_KEYS.lastOutDir, outDir);
+  }
+
+  await openFolderInOs(outDir);
 }
 
 function activate(context) {
@@ -159,10 +307,56 @@ function activate(context) {
       outputChannel.show(true);
       outputChannel.appendLine('---');
       try {
-        await cmdFlow({ outputChannel });
+        await cmdFlow({ outputChannel, context });
       } catch (e) {
         outputChannel.appendLine(String(e && e.stack ? e.stack : e));
         vscode.window.showErrorMessage(`NoirForge flow failed: ${e && e.message ? e.message : String(e)}`);
+      }
+    }),
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('noirforge.sizes', async () => {
+      outputChannel.show(true);
+      outputChannel.appendLine('---');
+      try {
+        await cmdSizes({ outputChannel, context });
+      } catch (e) {
+        outputChannel.appendLine(String(e && e.stack ? e.stack : e));
+        vscode.window.showErrorMessage(`NoirForge sizes failed: ${e && e.message ? e.message : String(e)}`);
+      }
+    }),
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('noirforge.computeAnalyze', async () => {
+      outputChannel.show(true);
+      outputChannel.appendLine('---');
+      try {
+        await cmdComputeAnalyze({ outputChannel, context });
+      } catch (e) {
+        outputChannel.appendLine(String(e && e.stack ? e.stack : e));
+        vscode.window.showErrorMessage(`NoirForge compute-analyze failed: ${e && e.message ? e.message : String(e)}`);
+      }
+    }),
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('noirforge.openArtifactsDir', async () => {
+      try {
+        await cmdOpenArtifactsDir({ context });
+      } catch (e) {
+        vscode.window.showErrorMessage(`NoirForge open artifacts dir failed: ${e && e.message ? e.message : String(e)}`);
+      }
+    }),
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('noirforge.openOutDir', async () => {
+      try {
+        await cmdOpenOutDir({ context });
+      } catch (e) {
+        vscode.window.showErrorMessage(`NoirForge open out dir failed: ${e && e.message ? e.message : String(e)}`);
       }
     }),
   );
