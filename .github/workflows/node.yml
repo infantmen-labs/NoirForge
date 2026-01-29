@@ -55,3 +55,9 @@ jobs:
 
       - name: Docs site build
         run: pnpm docs:build
+
+      - name: VS Code extension sanity
+        run: |
+          set -euo pipefail
+          node --check packages/vscode-extension/extension.js
+          node -e "JSON.parse(require('node:fs').readFileSync('packages/vscode-extension/package.json','utf8'))"
