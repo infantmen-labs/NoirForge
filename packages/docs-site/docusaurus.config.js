@@ -40,6 +40,7 @@ const config = {
       items: [
         { to: '/docs/intro', label: 'Docs', position: 'left' },
         { to: '/demo', label: 'Demo', position: 'left' },
+        { href: 'https://demo.noirforge.not', label: 'dApp', position: 'left' },
         { to: '/metrics', label: 'Metrics', position: 'left' },
         { to: '/templates', label: 'Templates', position: 'left' },
         { to: '/playground', label: 'Playground', position: 'left' },
@@ -64,9 +65,9 @@ const config = {
         {
           title: 'Packages',
           items: [
-            { label: '@noirforge/cli', href: 'https://www.npmjs.com/package/@noirforge/cli/v/0.1.0-rc.2' },
-            { label: '@noirforge/sdk', href: 'https://www.npmjs.com/package/@noirforge/sdk/v/0.1.0-rc.2' },
-            { label: '@noirforge/core', href: 'https://www.npmjs.com/package/@noirforge/core/v/0.1.0-rc.2' },
+            { label: '@noirforge/cli', href: 'https://www.npmjs.com/package/@noirforge/cli/v/0.1.0-rc.3' },
+            { label: '@noirforge/sdk', href: 'https://www.npmjs.com/package/@noirforge/sdk/v/0.1.0-rc.3' },
+            { label: '@noirforge/core', href: 'https://www.npmjs.com/package/@noirforge/core/v/0.1.0-rc.3' },
             { label: 'noirforge-sdk (Rust)', href: 'https://crates.io/crates/noirforge-sdk' },
           ],
         },

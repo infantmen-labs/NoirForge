@@ -4,6 +4,17 @@ The docs site has a browser-only live demo that can validate a manifest and buil
 
 If you want the full end-to-end flow (connect a wallet and submit a real devnet verify transaction), use the in-repo demo dApp.
 
+Hosted demo dApp:
+
+- https://demo.noirforge.not
+
+## Hosting
+
+The hosted demo dApp is deployed as a separate Vercel project with:
+
+- Root Directory: `packages/demo-dapp`
+- Custom Domain: `demo.noirforge.not`
+
 ## Start the demo dApp
 
 From the repo root:

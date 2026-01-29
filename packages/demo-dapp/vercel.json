@@ -1,0 +1,6 @@
+{
+  "version": 2,
+  "framework": "nextjs",
+  "installCommand": "pnpm -C ../.. install --frozen-lockfile",
+  "buildCommand": "pnpm -C ../.. --filter @noirforge/demo-dapp build"
+}
