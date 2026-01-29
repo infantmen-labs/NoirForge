@@ -42,7 +42,7 @@ jobs:
           echo "Using ref: $ref"
           echo "ref=$ref" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ steps.sanitize_ref.outputs.ref }}
 
