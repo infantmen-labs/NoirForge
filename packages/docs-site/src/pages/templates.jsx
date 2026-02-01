@@ -67,26 +67,29 @@ export default function Templates() {
               Browse NoirForge templates using the static registry served from this site. Nothing is executed; this is metadata only.
             </p>
 
-            <div className={styles.row} style={{ marginTop: '0.75rem' }}>
-              <input
-                className={styles.search}
-                placeholder="Search by name, tag, or description"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-              <Link className="button button--secondary button--sm" to="/docs/template-catalog">
-                Template catalog
-              </Link>
-              <button
-                className="button button--secondary button--sm"
-                type="button"
-                onClick={() => {
-                  if (typeof window === 'undefined') return;
-                  window.open(registryUrl, '_blank', 'noopener,noreferrer');
-                }}
-              >
-                registry.json
-              </button>
+            <div style={{ marginTop: '1rem' }}>
+              <div className={styles.row} style={{ marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <input
+                  className={styles.search}
+                  placeholder="Search by name, tag, or description"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  aria-label="Search templates"
+                />
+                <Link className="button button--secondary button--sm" to="/docs/template-catalog">
+                  Template catalog
+                </Link>
+                <button
+                  className="button button--secondary button--sm"
+                  type="button"
+                  onClick={() => {
+                    if (typeof window === 'undefined') return;
+                    window.open(registryUrl, '_blank', 'noopener,noreferrer');
+                  }}
+                >
+                  registry.json
+                </button>
+              </div>
             </div>
 
             {loadErr ? <div className={styles.error}>load_error={loadErr}</div> : null}
@@ -117,16 +120,16 @@ export default function Templates() {
 
               return (
                 <section key={name} className={styles.card}>
-                  <div className={styles.row} style={{ justifyContent: 'space-between' }}>
+                  <div className={styles.row} style={{ justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                     <h2 className={styles.templateName}>{name}</h2>
-                    <div className={styles.row}>
-                      <Link className="button button--secondary button--sm" href={repoUrl}>
-                        Repo
-                      </Link>
-                      <Link className="button button--secondary button--sm" href={readmeUrl}>
-                        README
-                      </Link>
-                    </div>
+                  </div>
+                  <div className={styles.row} style={{ gap: '0.5rem' }}>
+                    <Link className="button button--secondary button--sm" href={repoUrl}>
+                      Repo
+                    </Link>
+                    <Link className="button button--secondary button--sm" href={readmeUrl}>
+                      README
+                    </Link>
                   </div>
 
                   {desc ? <div className={styles.small} style={{ marginTop: '0.5rem' }}>{desc}</div> : null}

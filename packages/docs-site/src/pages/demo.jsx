@@ -211,7 +211,7 @@ export default function Demo() {
                 onChange={(e) => setManifestText(e.target.value)}
               />
 
-              <div className={styles.row}>
+              <div className={styles.row} style={{ marginTop: '0.75rem' }}>
                 <button
                   className="button button--primary button--sm"
                   type="button"
@@ -228,7 +228,7 @@ export default function Demo() {
                   Validate
                 </button>
 
-                <label className="button button--secondary button--sm" style={{ margin: 0 }}>
+                <label className="button button--secondary button--sm" style={{ margin: 0, cursor: 'pointer' }}>
                   Load JSON file
                   <input
                     type="file"

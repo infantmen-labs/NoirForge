@@ -1,4 +1,5 @@
 :root {
+  /* PRIMARY COLORS */
   --ifm-color-primary: #2f6feb;
   --ifm-color-primary-dark: #2a63d4;
   --ifm-color-primary-darker: #285dcc;
@@ -6,13 +7,82 @@
   --ifm-color-primary-light: #3c78ee;
   --ifm-color-primary-lighter: #447ff0;
   --ifm-color-primary-lightest: #5d92f4;
+
+  /* NOIRFORGE DESIGN TOKENS */
+  /* Backgrounds */
+  --nf-color-bg-dark: #0b1020;
+  --nf-color-bg-mid: #0f172a;
+  --nf-color-bg-light: #111827;
+  
+  /* Text colors */
+  --nf-color-text-primary: rgba(255, 255, 255, 0.95);
+  --nf-color-text-secondary: rgba(255, 255, 255, 0.7);
+  --nf-color-text-tertiary: rgba(255, 255, 255, 0.5);
+  
+  /* State colors */
+  --nf-color-success: #10b981;
+  --nf-color-success-light: rgba(16, 185, 129, 0.12);
+  --nf-color-success-border: rgba(16, 185, 129, 0.35);
+  
+  --nf-color-error: #ef4444;
+  --nf-color-error-light: rgba(239, 68, 68, 0.12);
+  --nf-color-error-border: rgba(239, 68, 68, 0.35);
+  
+  --nf-color-warn: #f59e0b;
+  --nf-color-warn-light: rgba(245, 158, 11, 0.12);
+  --nf-color-warn-border: rgba(245, 158, 11, 0.35);
+  
+  --nf-color-info: #3b82f6;
+  --nf-color-info-light: rgba(59, 130, 246, 0.12);
+  --nf-color-info-border: rgba(59, 130, 246, 0.35);
+  
+  /* Borders & UI */
+  --nf-color-border-light: rgba(255, 255, 255, 0.12);
+  --nf-color-border-medium: rgba(255, 255, 255, 0.18);
+  
+  /* Spacing */
+  --nf-spacing-xs: 0.25rem;
+  --nf-spacing-sm: 0.5rem;
+  --nf-spacing-md: 0.75rem;
+  --nf-spacing-lg: 1rem;
+  --nf-spacing-xl: 1.5rem;
+  --nf-spacing-2xl: 2rem;
+  --nf-spacing-3xl: 2.5rem;
+  
+  /* Border radius */
+  --nf-radius-sm: 8px;
+  --nf-radius-md: 12px;
+  --nf-radius-lg: 14px;
+  
   --ifm-code-font-size: 95%;
 }
 
+/* HERO SECTION ENHANCEMENTS */
 .hero__title {
   letter-spacing: -0.02em;
+  font-weight: 700;
 }
 
 .hero__subtitle {
-  max-width: 60ch;
+  max-width: 65ch;
+  line-height: 1.6;
+}
+
+/* DOCUSAURUS OVERRIDES FOR CONSISTENCY */
+.button--secondary {
+  transition: all 0.2s ease;
+}
+
+.button--secondary:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.button--primary {
+  background-color: var(--ifm-color-primary);
+  border-color: var(--ifm-color-primary);
+}
+
+.button--primary:hover {
+  background-color: var(--ifm-color-primary-dark);
+  border-color: var(--ifm-color-primary-dark);
 }

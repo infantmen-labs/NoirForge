@@ -31,34 +31,34 @@ export default function Home() {
       </header>
 
       <main>
-        <div className="container" style={{ padding: '2rem 0' }}>
+        <section className="container" style={{ padding: '2rem 1.25rem' }}>
           <div className="row">
             <div className="col col--4">
-              <h2>CLI-first</h2>
-              <p>
-                NoirForge’s CLI is the source of truth for artifact layout, manifest semantics, and end-to-end reproducible
+              <h2 style={{ fontSize: '1.25rem', marginTop: 0, marginBottom: '0.5rem' }}>CLI-first</h2>
+              <p style={{ lineHeight: '1.6', color: 'rgba(255, 255, 255, 0.8)', marginBottom: '1rem' }}>
+                NoirForge's CLI is the source of truth for artifact layout, manifest semantics, and end-to-end reproducible
                 flows.
               </p>
-              <Link to="/docs/cli/overview">CLI docs →</Link>
+              <Link to="/docs/cli/overview" style={{ fontWeight: 500 }}>CLI docs →</Link>
             </div>
             <div className="col col--4">
-              <h2>SDKs</h2>
-              <p>
+              <h2 style={{ fontSize: '1.25rem', marginTop: 0, marginBottom: '0.5rem' }}>SDKs</h2>
+              <p style={{ lineHeight: '1.6', color: 'rgba(255, 255, 255, 0.8)', marginBottom: '1rem' }}>
                 TypeScript and Rust SDKs help you load manifests, build instruction data, and submit verification
                 transactions.
               </p>
-              <Link to="/docs/sdks/overview">SDK docs →</Link>
+              <Link to="/docs/sdks/overview" style={{ fontWeight: 500 }}>SDK docs →</Link>
             </div>
             <div className="col col--4">
-              <h2>Production posture</h2>
-              <p>
-                Toolchain pinning, SBOM/provenance, and explicit mainnet safety gates are part of NoirForge’s operating
+              <h2 style={{ fontSize: '1.25rem', marginTop: 0, marginBottom: '0.5rem' }}>Production posture</h2>
+              <p style={{ lineHeight: '1.6', color: 'rgba(255, 255, 255, 0.8)', marginBottom: '1rem' }}>
+                Toolchain pinning, SBOM/provenance, and explicit mainnet safety gates are part of NoirForge's operating
                 model.
               </p>
-              <Link to="/docs/operations/ci-and-releases">CI & releases →</Link>
+              <Link to="/docs/operations/ci-and-releases" style={{ fontWeight: 500 }}>CI & releases →</Link>
             </div>
           </div>
-        </div>
+        </section>
       </main>
     </Layout>
   );
