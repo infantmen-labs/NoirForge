@@ -187,13 +187,33 @@ export default function Demo() {
       <div className={styles.page}>
         <div className={styles.container}>
           <header className={styles.header}>
-            <h1 className={styles.title}>NoirForge Live Demo</h1>
+            <h1 className={styles.title}>Live Demo</h1>
             <p className={styles.subtitle}>
-              Validate a NoirForge manifest and build verifier instruction data in the browser. Nothing is uploaded.
+              Validate NoirForge manifests and build instruction data in your browser.
             </p>
-            <div style={{ marginTop: '0.75rem' }}>
+            
+            <div style={{
+              marginTop: '1.5rem',
+              padding: '1rem',
+              borderRadius: '10px',
+              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(0, 0, 0, 0.3))',
+              borderLeft: '3px solid rgba(16, 185, 129, 0.4)',
+              borderTop: '1px solid rgba(16, 185, 129, 0.2)',
+              borderRight: '1px solid rgba(16, 185, 129, 0.2)',
+              borderBottom: '1px solid rgba(16, 185, 129, 0.2)'
+            }}>
+              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                <div style={{ fontSize: '1.2rem', flexShrink: 0 }}>🔒</div>
+                <div>
+                  <div style={{ fontWeight: 600, color: 'rgba(16, 185, 129, 0.95)', marginBottom: '0.25rem' }}>Everything stays local</div>
+                  <div style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.9rem' }}>No files are uploaded or sent to any server. All processing happens in your browser.</div>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ marginTop: '1rem' }}>
               <Link className="button button--secondary button--sm" to="/docs/getting-started/live-demo">
-                How to use this demo
+                How to use
               </Link>
             </div>
           </header>
@@ -246,11 +266,18 @@ export default function Demo() {
               </div>
 
               {manifestOk && !manifestOk.ok && (
-                <div className={styles.badgeErr}>
-                  <div className={styles.badgeTitle}>Manifest errors</div>
-                  <ul>
+                <div style={{
+                  marginTop: '1rem',
+                  padding: '1rem',
+                  borderRadius: '10px',
+                  background: 'rgba(239, 68, 68, 0.12)',
+                  border: '1px solid rgba(239, 68, 68, 0.35)',
+                  borderLeft: '3px solid rgba(239, 68, 68, 0.5)'
+                }}>
+                  <div style={{ fontWeight: 600, color: 'rgba(239, 68, 68, 0.95)', marginBottom: '0.75rem', fontSize: '0.95rem' }}>Validation errors</div>
+                  <ul style={{ margin: 0, paddingLeft: '1.25rem' }}>
                     {manifestOk.errors.map((err, idx) => (
-                      <li key={idx} className={styles.small}>
+                      <li key={idx} className={styles.small} style={{ color: 'rgba(255, 255, 255, 0.8)', marginBottom: '0.35rem' }}>
                         {err}
                       </li>
                     ))}
@@ -259,17 +286,35 @@ export default function Demo() {
               )}
 
               {manifestOk && manifestOk.ok && (
-                <div className={styles.badgeOk}>
-                  <div className={styles.badgeTitle}>Valid manifest v1</div>
-                  <div className={styles.kv}>
-                    <div className={styles.k}>name</div>
-                    <div className={`${styles.v} ${styles.mono}`}>{manifestOk.manifest.name}</div>
-                    <div className={styles.k}>created_at</div>
-                    <div className={`${styles.v} ${styles.mono}`}>{manifestOk.manifest.created_at}</div>
-                    <div className={styles.k}>proving_system</div>
-                    <div className={`${styles.v} ${styles.mono}`}>{manifestOk.manifest.proving_system}</div>
-                    <div className={styles.k}>outputs keys</div>
-                    <div className={`${styles.v} ${styles.mono}`}>{Object.keys(manifestOk.manifest.outputs || {}).length}</div>
+                <div style={{
+                  marginTop: '1rem',
+                  padding: '1rem',
+                  borderRadius: '10px',
+                  background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(0, 0, 0, 0.3))',
+                  border: '1px solid rgba(16, 185, 129, 0.35)',
+                  borderLeft: '3px solid rgba(16, 185, 129, 0.5)'
+                }}>
+                  <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                    <div style={{ color: 'rgba(16, 185, 129, 0.95)', fontSize: '1.1rem' }}>✓</div>
+                    <div style={{ fontWeight: 600, color: 'rgba(16, 185, 129, 0.95)' }}>Valid manifest v1</div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                    <div>
+                      <div className={styles.small} style={{ color: 'rgba(255, 255, 255, 0.6)', marginBottom: '0.35rem' }}>Artifact name</div>
+                      <div className={`${styles.mono}`} style={{ color: 'rgba(59, 130, 246, 0.95)', fontSize: '0.95rem' }}>{manifestOk.manifest.name}</div>
+                    </div>
+                    <div>
+                      <div className={styles.small} style={{ color: 'rgba(255, 255, 255, 0.6)', marginBottom: '0.35rem' }}>Created</div>
+                      <div className={`${styles.mono}`} style={{ color: 'rgba(255, 255, 255, 0.75)', fontSize: '0.95rem' }}>{manifestOk.manifest.created_at}</div>
+                    </div>
+                    <div>
+                      <div className={styles.small} style={{ color: 'rgba(255, 255, 255, 0.6)', marginBottom: '0.35rem' }}>Proving system</div>
+                      <div className={`${styles.mono}`} style={{ color: 'rgba(255, 255, 255, 0.75)', fontSize: '0.95rem' }}>{manifestOk.manifest.proving_system}</div>
+                    </div>
+                    <div>
+                      <div className={styles.small} style={{ color: 'rgba(255, 255, 255, 0.6)', marginBottom: '0.35rem' }}>Output keys</div>
+                      <div className={`${styles.mono}`} style={{ color: 'rgba(255, 255, 255, 0.75)', fontSize: '0.95rem' }}>{Object.keys(manifestOk.manifest.outputs || {}).length}</div>
+                    </div>
                   </div>
                 </div>
               )}

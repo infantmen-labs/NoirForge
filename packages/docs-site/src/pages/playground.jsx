@@ -151,43 +151,126 @@ export default function Playground() {
             </div>
           </header>
 
-          <section className={styles.card} style={{ marginBottom: '1rem' }}>
+          <section className={styles.card} style={{ marginBottom: '1rem', background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(0, 0, 0, 0.3))', borderColor: 'rgba(59, 130, 246, 0.2)' }}>
             <div className={styles.cardTitle}>
-              <h2>Guided flow</h2>
+              <h2>Workflow</h2>
             </div>
 
-            <div className={styles.small}>
-              A simple path from template → artifacts → verify:
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem', marginTop: '1rem' }}>
+              <div style={{ position: 'relative', paddingLeft: '2.5rem' }}>
+                <div style={{
+                  position: 'absolute',
+                  left: 0,
+                  top: 0,
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  background: 'rgba(59, 130, 246, 0.2)',
+                  border: '2px solid rgba(59, 130, 246, 0.5)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '0.9rem',
+                  fontWeight: 600,
+                  color: 'rgba(59, 130, 246, 0.95)'
+                }}>1</div>
+                <h4 style={{ marginTop: 0, marginBottom: '0.5rem', fontSize: '0.95rem' }}>Pick template</h4>
+                <div className={styles.mono} style={{ fontSize: '0.8rem', color: 'rgba(255, 255, 255, 0.7)' }}>pnpm noirforge init</div>
+              </div>
+
+              <div style={{ position: 'relative', paddingLeft: '2.5rem' }}>
+                <div style={{
+                  position: 'absolute',
+                  left: 0,
+                  top: 0,
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  background: 'rgba(59, 130, 246, 0.2)',
+                  border: '2px solid rgba(59, 130, 246, 0.5)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '0.9rem',
+                  fontWeight: 600,
+                  color: 'rgba(59, 130, 246, 0.95)'
+                }}>2</div>
+                <h4 style={{ marginTop: 0, marginBottom: '0.5rem', fontSize: '0.95rem' }}>Build artifacts</h4>
+                <div className={styles.mono} style={{ fontSize: '0.8rem', color: 'rgba(255, 255, 255, 0.7)' }}>pnpm noirforge flow</div>
+              </div>
+
+              <div style={{ position: 'relative', paddingLeft: '2.5rem' }}>
+                <div style={{
+                  position: 'absolute',
+                  left: 0,
+                  top: 0,
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  background: 'rgba(59, 130, 246, 0.2)',
+                  border: '2px solid rgba(59, 130, 246, 0.5)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '0.9rem',
+                  fontWeight: 600,
+                  color: 'rgba(59, 130, 246, 0.95)'
+                }}>3</div>
+                <h4 style={{ marginTop: 0, marginBottom: '0.5rem', fontSize: '0.95rem' }}>Locate files</h4>
+                <div className={styles.mono} style={{ fontSize: '0.8rem', color: 'rgba(255, 255, 255, 0.7)' }}>artifacts/*/*.proof</div>
+              </div>
+
+              <div style={{ position: 'relative', paddingLeft: '2.5rem' }}>
+                <div style={{
+                  position: 'absolute',
+                  left: 0,
+                  top: 0,
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  background: 'rgba(59, 130, 246, 0.2)',
+                  border: '2px solid rgba(59, 130, 246, 0.5)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '0.9rem',
+                  fontWeight: 600,
+                  color: 'rgba(59, 130, 246, 0.95)'
+                }}>4</div>
+                <h4 style={{ marginTop: 0, marginBottom: '0.5rem', fontSize: '0.95rem' }}>Inspect here</h4>
+                <div className={styles.small} style={{ fontSize: '0.8rem', color: 'rgba(255, 255, 255, 0.7)' }}>Upload files below</div>
+              </div>
+
+              <div style={{ position: 'relative', paddingLeft: '2.5rem' }}>
+                <div style={{
+                  position: 'absolute',
+                  left: 0,
+                  top: 0,
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  background: 'rgba(59, 130, 246, 0.2)',
+                  border: '2px solid rgba(59, 130, 246, 0.5)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '0.9rem',
+                  fontWeight: 600,
+                  color: 'rgba(59, 130, 246, 0.95)'
+                }}>5</div>
+                <h4 style={{ marginTop: 0, marginBottom: '0.5rem', fontSize: '0.95rem' }}>Verify on chain</h4>
+                <div className={styles.small} style={{ fontSize: '0.8rem', color: 'rgba(255, 255, 255, 0.7)' }}>Deploy & verify</div>
+              </div>
             </div>
 
-            <div className={styles.kv}>
-              <div className={styles.k}>1) Pick a template</div>
-              <div className={`${styles.v} ${styles.mono}`}>pnpm noirforge init &lt;template&gt; &lt;dest_dir&gt;</div>
-              <div className={styles.k}>2) Run pipeline</div>
-              <div className={`${styles.v} ${styles.mono}`}>pnpm noirforge flow --circuit-dir &lt;dest_dir&gt; --artifact-name &lt;artifact_name&gt;</div>
-              <div className={styles.k}>3) Find outputs</div>
-              <div className={`${styles.v} ${styles.mono}`}>artifacts/&lt;artifact_name&gt;/local/*.proof + *.pw</div>
-              <div className={styles.k}>4) Inspect here</div>
-              <div className={`${styles.v} ${styles.mono}`}>upload .pw/.proof below</div>
-              <div className={styles.k}>5) Verify</div>
-              <div className={styles.v}>Use the live demo / demo dApp or deploy+verify on devnet.</div>
-            </div>
-
-            <div className={styles.row}>
+            <div className={styles.row} style={{ marginTop: '1.5rem', gap: '0.5rem' }}>
               <Link className="button button--secondary button--sm" to="/templates">
-                Templates
+                Browse templates
               </Link>
               <Link className="button button--secondary button--sm" to="/docs/getting-started/quickstart">
                 Quickstart
               </Link>
-              <Link className="button button--secondary button--sm" to="/docs/getting-started/demo-dapp">
-                Demo dApp
-              </Link>
-              <Link className="button button--secondary button--sm" to="/metrics">
-                Metrics
-              </Link>
             </div>
-
           </section>
 
           <div className={styles.grid}>
@@ -231,22 +314,22 @@ export default function Playground() {
 
                     {Array.isArray(witnessParsed.preview) && witnessParsed.preview.length > 0 ? (
                       <div style={{ marginTop: '0.75rem' }}>
-                        <div className={styles.badgeTitle}>First elements (preview)</div>
-                        <div className={styles.tableWrap}>
-                          <table className={styles.table}>
+                        <div className={styles.badgeTitle} style={{ marginBottom: '0.75rem' }}>Field elements (first 8)</div>
+                        <div className={styles.tableWrap} style={{ borderRadius: '10px' }}>
+                          <table className={styles.table} style={{ fontSize: '0.8rem' }}>
                             <thead>
-                              <tr>
-                                <th>idx</th>
-                                <th>hex (32 bytes)</th>
-                                <th>decimal (big-endian)</th>
+                              <tr style={{ background: 'rgba(0, 0, 0, 0.35)' }}>
+                                <th style={{ textAlign: 'left', fontWeight: 600, color: 'rgba(255, 255, 255, 0.8)' }}>#</th>
+                                <th style={{ textAlign: 'left', fontWeight: 600, color: 'rgba(255, 255, 255, 0.8)' }}>Hex (32 bytes)</th>
+                                <th style={{ textAlign: 'left', fontWeight: 600, color: 'rgba(255, 255, 255, 0.8)' }}>Decimal</th>
                               </tr>
                             </thead>
                             <tbody>
                               {witnessParsed.preview.map((row) => (
-                                <tr key={row.idx}>
-                                  <td className={styles.mono}>{row.idx}</td>
-                                  <td className={styles.mono}>{row.hex}</td>
-                                  <td className={styles.mono}>{row.decimal}</td>
+                                <tr key={row.idx} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                                  <td className={styles.mono} style={{ color: 'rgba(255, 255, 255, 0.7)', paddingRight: '1rem' }}>{row.idx}</td>
+                                  <td className={styles.mono} style={{ color: 'rgba(59, 130, 246, 0.9)', fontSize: '0.75rem', wordBreak: 'break-all' }}>{row.hex}</td>
+                                  <td className={styles.mono} style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.75rem', wordBreak: 'break-word' }}>{row.decimal.slice(0, 40)}...</td>
                                 </tr>
                               ))}
                             </tbody>

@@ -258,18 +258,26 @@ export default function Metrics() {
                 </div>
 
                 {computeSummary ? (
-                  <div className={styles.kv} style={{ marginTop: '0.75rem' }}>
-                    <div className={styles.k}>count</div>
-                    <div className={`${styles.v} ${styles.mono}`}>{computeSummary.count}</div>
-                    <div className={styles.k}>min</div>
-                    <div className={`${styles.v} ${styles.mono}`}>{computeSummary.min}</div>
-                    <div className={styles.k}>max</div>
-                    <div className={`${styles.v} ${styles.mono}`}>{computeSummary.max}</div>
-                    <div className={styles.k}>latest</div>
-                    <div className={`${styles.v} ${styles.mono}`}>{computeSummary.last}</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '0.75rem', marginTop: '0.75rem' }}>
+                    <div style={{ background: 'rgba(59, 130, 246, 0.1)', borderRadius: '8px', padding: '0.75rem', borderLeft: '3px solid rgba(59, 130, 246, 0.5)' }}>
+                      <div className={styles.small} style={{ color: 'rgba(255, 255, 255, 0.6)', marginBottom: '0.25rem' }}>Count</div>
+                      <div className={`${styles.mono}`} style={{ fontSize: '1.2rem', color: 'rgba(59, 130, 246, 0.95)', fontWeight: 600 }}>{computeSummary.count}</div>
+                    </div>
+                    <div style={{ background: 'rgba(16, 185, 129, 0.1)', borderRadius: '8px', padding: '0.75rem', borderLeft: '3px solid rgba(16, 185, 129, 0.5)' }}>
+                      <div className={styles.small} style={{ color: 'rgba(255, 255, 255, 0.6)', marginBottom: '0.25rem' }}>Min</div>
+                      <div className={`${styles.mono}`} style={{ fontSize: '1.2rem', color: 'rgba(16, 185, 129, 0.95)', fontWeight: 600 }}>{computeSummary.min}</div>
+                    </div>
+                    <div style={{ background: 'rgba(239, 68, 68, 0.1)', borderRadius: '8px', padding: '0.75rem', borderLeft: '3px solid rgba(239, 68, 68, 0.5)' }}>
+                      <div className={styles.small} style={{ color: 'rgba(255, 255, 255, 0.6)', marginBottom: '0.25rem' }}>Max</div>
+                      <div className={`${styles.mono}`} style={{ fontSize: '1.2rem', color: 'rgba(239, 68, 68, 0.95)', fontWeight: 600 }}>{computeSummary.max}</div>
+                    </div>
+                    <div style={{ background: 'rgba(245, 158, 11, 0.1)', borderRadius: '8px', padding: '0.75rem', borderLeft: '3px solid rgba(245, 158, 11, 0.5)' }}>
+                      <div className={styles.small} style={{ color: 'rgba(255, 255, 255, 0.6)', marginBottom: '0.25rem' }}>Latest</div>
+                      <div className={`${styles.mono}`} style={{ fontSize: '1.2rem', color: 'rgba(245, 158, 11, 0.95)', fontWeight: 600 }}>{computeSummary.last}</div>
+                    </div>
                   </div>
                 ) : (
-                  <div className={styles.small} style={{ marginTop: '0.75rem' }}>
+                  <div className={styles.small} style={{ marginTop: '0.75rem', color: 'rgba(255, 255, 255, 0.6)' }}>
                     No compute history loaded.
                   </div>
                 )}
@@ -279,25 +287,25 @@ export default function Metrics() {
                 </div>
 
                 {recent.length > 0 ? (
-                  <div style={{ marginTop: '0.75rem' }}>
-                    <div className={styles.badgeTitle}>Recent runs</div>
-                    <div className={styles.tableWrap}>
-                      <table className={styles.table}>
+                  <div style={{ marginTop: '1rem' }}>
+                    <div className={styles.badgeTitle} style={{ marginBottom: '0.75rem' }}>Recent runs</div>
+                    <div className={styles.tableWrap} style={{ borderRadius: '10px' }}>
+                      <table className={styles.table} style={{ fontSize: '0.85rem' }}>
                         <thead>
-                          <tr>
-                            <th>simulated_at</th>
-                            <th>cluster</th>
-                            <th>cu</th>
-                            <th>ok</th>
+                          <tr style={{ background: 'rgba(0, 0, 0, 0.35)' }}>
+                            <th style={{ textAlign: 'left', fontWeight: 600, color: 'rgba(255, 255, 255, 0.8)' }}>Time</th>
+                            <th style={{ textAlign: 'left', fontWeight: 600, color: 'rgba(255, 255, 255, 0.8)' }}>Cluster</th>
+                            <th style={{ textAlign: 'right', fontWeight: 600, color: 'rgba(255, 255, 255, 0.8)' }}>Compute Units</th>
+                            <th style={{ textAlign: 'center', fontWeight: 600, color: 'rgba(255, 255, 255, 0.8)' }}>Status</th>
                           </tr>
                         </thead>
                         <tbody>
                           {recent.map((r, idx) => (
-                            <tr key={idx}>
-                              <td className={styles.mono}>{r.simulated_at || '-'}</td>
-                              <td className={styles.mono}>{r.cluster || '-'}</td>
-                              <td className={styles.mono}>{r.compute_units_consumed == null ? '-' : r.compute_units_consumed}</td>
-                              <td className={styles.mono}>{r.ok == null ? '-' : r.ok ? 'true' : 'false'}</td>
+                            <tr key={idx} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)', background: idx % 2 === 0 ? 'transparent' : 'rgba(0, 0, 0, 0.15)' }}>
+                              <td className={styles.mono} style={{ color: 'rgba(255, 255, 255, 0.75)', fontSize: '0.8rem' }}>{r.simulated_at ? new Date(r.simulated_at).toLocaleString() : '-'}</td>
+                              <td style={{ color: 'rgba(255, 255, 255, 0.75)' }}>{r.cluster || '-'}</td>
+                              <td className={styles.mono} style={{ textAlign: 'right', color: 'rgba(59, 130, 246, 0.9)' }}>{r.compute_units_consumed == null ? '-' : r.compute_units_consumed.toLocaleString()}</td>
+                              <td style={{ textAlign: 'center', color: r.ok ? 'rgba(16, 185, 129, 0.9)' : 'rgba(239, 68, 68, 0.9)', fontWeight: 500 }}>{r.ok == null ? '-' : r.ok ? '✓' : '✗'}</td>
                             </tr>
                           ))}
                         </tbody>
